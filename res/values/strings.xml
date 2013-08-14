@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">长沙雅驰一卡通销售点</string>
+
+    <string name="msg_exit">确定退出程序?</string>
+    <string name="msg_ok">确定</string>
+    <string name="msg_cancel">取消</string>
+
+    <string name="action_label_refresh">刷新</string>
+    <string name="action_label_search">搜索销售点</string>
+    
+    <string name="action_label_nearby">按距离标识</string>
+
+    
+    <string name="action_label_add">按范围标识</string>
+
+
+</resources>
