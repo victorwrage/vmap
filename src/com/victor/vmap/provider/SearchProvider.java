@@ -6,7 +6,7 @@
  * @Creation 2013-9-3 上午9:23:27   
  * @Copyright Copyright © 2009 - 2013 Victor.All Rights Reserved.
  **/
-package com.victor.vmap;
+package com.victor.vmap.provider;
 
 import java.util.List;
 

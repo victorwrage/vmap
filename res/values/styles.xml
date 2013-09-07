@@ -37,7 +37,7 @@
     </style>
  
     <style name="DialogText.Title">
-        <item name="android:textSize">16sp</item>
+        <item name="android:textSize">18sp</item>
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textColor">#FFFFFFFF</item>
@@ -60,6 +60,11 @@
       <style name="SlideBottomAnimation">  
         <item name="android:windowEnterAnimation">@anim/slidein_frombottom</item>  
         <item name="android:windowExitAnimation">@anim/slideout_frombottom</item>  
+    </style> 
+    
+       <style name="SlideBottomAnimationLong">  
+        <item name="android:windowEnterAnimation">@anim/slidein_frombottom_long</item>  
+        <item name="android:windowExitAnimation">@anim/slideout_frombottom_long</item>  
     </style> 
      
     

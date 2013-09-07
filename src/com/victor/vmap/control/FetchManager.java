@@ -45,12 +45,14 @@ public class FetchManager {
 	}
 
 	/**
-	 * 开始以堆栈形式执行Action
+	 * 开始获取网点信息
 	 * 
 	 * @param item
 	 */
 	public void startFetchData() {
+		int seq = 0;
 		for (BranchRequestModel item : MapConstant.getRequest_list()) {
+			MapConstant.UPDATING_GEOTABLE_SEQ = seq++;
 			loadTaskHandler.sendMessage(loadTaskHandler.obtainMessage(0, item));
 		}
 	}

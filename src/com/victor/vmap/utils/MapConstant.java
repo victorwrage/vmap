@@ -32,11 +32,25 @@ public class MapConstant {
 	private static String filterParams;	
 	private static List<BranchModel> list = new ArrayList<BranchModel>();
 	private static List<BranchRequestModel> request_list = new ArrayList<BranchRequestModel>();
+	/**正在更新的Geotable_id*/
+	public static  int UPDATING_GEOTABLE_SEQ = 0;
 	/**地图key*/
 	public static final String strKey = "FE95801d772e14d0b5ec69cb125ba77c";
-	
+	/**微信APP key*/
+	public static final String wxKey = "wx6e3d98ab86eb8acd";
+	/** 分享标题*/
+	public static final String socialShareTitle = "雅驰电子湘行一卡通";
+	/** 微信分享标题*/
+	public static final String wxShareTitle = "来自雅驰电子的分享";
+	/** 微信内容分享小题*/
+	public static final String wxContentShareTitle = "雅驰湘行一卡通";
+	/** 微信内容分享点击网址*/
+	public static final String wxContentShareUrl =  "http://www.ycic.com.cn/";
+	/** 数据库的网点集合*/
+	public static  ArrayList<ArrayList<BranchModel>> cate_branchs;
 	// 定位结果
 	private static BDLocation currlocation = null;
+
 	
 	/**
 	 * @return the request_list

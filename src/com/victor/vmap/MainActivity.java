@@ -1,32 +1,18 @@
 package com.victor.vmap;
 
-import java.util.ArrayList;
-
-import com.baidu.mapapi.BMapManager;
-import com.baidu.mapapi.MKGeneralListener;
 import com.baidu.mapapi.map.ItemizedOverlay;
-import com.baidu.mapapi.map.MKEvent;
-import com.baidu.mapapi.map.MKMapViewListener;
+
 import com.baidu.mapapi.map.MKOLUpdateElement;
 import com.baidu.mapapi.map.MKOfflineMap;
 import com.baidu.mapapi.map.MKOfflineMapListener;
 import com.baidu.mapapi.map.MapController;
-import com.baidu.mapapi.map.MapPoi;
 import com.baidu.mapapi.map.MapView;
 import com.baidu.mapapi.map.OverlayItem;
 import com.baidu.mapapi.map.PopupClickListener;
 import com.baidu.mapapi.map.PopupOverlay;
 import com.baidu.platform.comapi.basestruct.GeoPoint;
-import com.umeng.analytics.MobclickAgent;
-import com.umeng.socialize.controller.RequestType;
-import com.umeng.socialize.controller.UMServiceFactory;
-import com.umeng.socialize.controller.UMSocialService;
 import com.umeng.socialize.controller.UMSsoHandler;
-import com.umeng.socialize.controller.UMWXHandler;
-import com.umeng.socialize.media.UMImage;
-import com.umeng.update.UmengUpdateAgent;
 import com.victor.vmap.control.BranchModel;
-import com.victor.vmap.provider.BranchDbHelper;
 import com.victor.vmap.utils.MapConstant;
 import com.victor.vmap.utils.SearchUtils;
 import com.victor.vmap.utils.SearchUtils.Word;
@@ -34,24 +20,20 @@ import com.yachi.library_yachi.VLog;
 import com.yachi.library_yachi.VToast;
 import com.yachi.library_yachi.utils.ApplicationInfoUtil;
 
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.DialogInterface.OnDismissListener;
-import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.View.OnTouchListener;
+import android.view.ViewGroup.LayoutParams;
+import android.view.ViewTreeObserver;
+import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.AdapterView;
@@ -60,134 +42,86 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.RadioGroup;
+import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-
-public class MainActivity extends Activity implements OnClickListener {
-	private VMapApplication app;
-	private Context context;
-	/** 过滤后的网点集合 */
-	private ArrayList<ArrayList<BranchModel>> cate_branchs;
-	private UMSocialService controller;
-	private BranchDbHelper db_helper;
-	private BMapManager mBMapManager = null;
-	private Dialog loading;
-	private MapView mMapView = null;
+public class MainActivity extends BaseActivity{
+	
 	/** 关于、视图、设置 对话框 */
 	private Dialog aboutDialog, layer_Dialog, setting_Dialog;
 	/** 描点标记、定位标记 */
 	private OverlayTest ov_markA, ov_markB, ov_markC, ov_markD, ovt_location;
 	private PopupOverlay pop;
-
-	private EditText etdata;
+	/** 搜索按钮*/
 	private Button btnsearch;
-
+	/** 搜索文本框*/
+	private EditText etdata;
+	/** 底部布局的高度（用于显示Geotable参考）*/
+	private  int bottom_height;
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		context = this;
 		MapConstant.mapActivity = this;
-		db_helper = BranchDbHelper.getInstance(context);
-		app = (VMapApplication) VMapApplication.getInstance();
-		app.addActivitys(this);
-
-		UmengUpdateAgent.update(this);// 加入更新
-		UmengUpdateAgent.setUpdateOnlyWifi(false);
-		MobclickAgent.onError(this);// 加入出错报告
-
-		initEngineManager(this);
-
 		setContentView(R.layout.activity_main);
 		resolveIntent(getIntent());
-		initBranchs();
+
 		initView();
 		initOffLineMap();
-
 	}
 
-	
-	/** 
-	 * @Name resolveIntent 
-	 * @Description TODO 
-	 * @param intent 
-	**/
+
+	/**
+	 * @Name resolveIntent
+	 * @Description TODO
+	 * @param intent
+	 **/
 	private void resolveIntent(Intent intent) {
-		VLog.v("resolveIntent--"+intent.getAction());
+		VLog.v("resolveIntent--" + intent.getAction());
 		if (Intent.ACTION_VIEW.equals(intent.getAction())) {
-			SearchUtils.Word theWord = SearchUtils.getInstance().getMatches(
-			intent.getDataString().trim().toLowerCase()).get(0);
+			SearchUtils.Word theWord = SearchUtils.getInstance()
+					.getMatches(intent.getDataString().trim().toLowerCase())
+					.get(0);
 			launchWord(theWord);
-            finish();
-		}else{
-			Button search_btn = (Button) findViewById(R.id.btncall);
-			search_btn.setOnTouchListener(new OnTouchListener() {
+			finish();
+		} else {
+			Button button = (Button) findViewById(R.id.btncall);
+			button.setOnClickListener(new OnClickListener() {
+
 				@Override
-				public boolean onTouch(View v, MotionEvent event) {
+				public void onClick(View v) {
+					VLog.v("resolveIntent---click");
 					onSearchRequested();
-					return false;
+
 				}
 			});
 		}
 	}
-     
+
 	
-
-	/** 
-	 * @Name launchWord 
-	 * @Description TODO 
-	 * @param theWord 
-	**/
-	private void launchWord(Word theWord) {
-		
-		
-	}
-
-
 	/**
-	 * @Name initBranchs
+	 * @Name launchWord
 	 * @Description TODO
+	 * @param theWord
 	 **/
-	private void initBranchs() {
-		cate_branchs = new ArrayList<ArrayList<BranchModel>>();
-		ArrayList<BranchModel> listA = db_helper
-				.getBranchsByGeotableId("31930");
-		ArrayList<BranchModel> listB = db_helper
-				.getBranchsByGeotableId("32425");
-		ArrayList<BranchModel> listC = db_helper
-				.getBranchsByGeotableId("31669");
-		ArrayList<BranchModel> listD = db_helper
-				.getBranchsByGeotableId("32426");
-		if (listA == null) {
-			listA = new ArrayList<BranchModel>();
-		}
-		if (listB == null) {
-			listB = new ArrayList<BranchModel>();
-		}
-		if (listC == null) {
-			listC = new ArrayList<BranchModel>();
-		}
-		if (listD == null) {
-			listD = new ArrayList<BranchModel>();
-		}
-		cate_branchs.add(listA);
-		cate_branchs.add(listB);
-		cate_branchs.add(listC);
-		cate_branchs.add(listD);
+	private void launchWord(Word theWord) {
 
 	}
+
+	
 
 	/**
 	 * @Name initOffLineMap
-	 * @Description TODO
+	 * @Description TODO 初始化离线地图
 	 **/
 	private void initOffLineMap() {
+		VLog.v("MainActivity--initOffLineMap");
 		final MKOfflineMap mOffline = new MKOfflineMap(); // 申明变量
 		MapController mMapController = mMapView.getController();
-
 		// 写在onCreate函数里
-
 		// offline 实始化方法用更改。
 		mOffline.init(mMapController, new MKOfflineMapListener() {
 			@Override
@@ -212,91 +146,12 @@ public class MainActivity extends Activity implements OnClickListener {
 
 	}
 
-	@Override
-	public void onPause() {
-		mMapView.onPause();
-		if (mBMapManager != null) {
-			mBMapManager.stop();
-		}
-		mMapView.setKeepScreenOn(false);
-		removeAllMarker();
-		super.onPause();
-		MobclickAgent.onPause(this);
-	}
-
-	@Override
-	public void onResume() {
-		mMapView.onResume();
-		if (mBMapManager != null) {
-			mBMapManager.start();
-		}
-		mMapView.setKeepScreenOn(true);
-		super.onResume();
-		MobclickAgent.onResume(this);
-		removeAllMarker();
-		addAllMarker();
-	}
-
-	/**
-	 * @Name initSocialShare
-	 * @Description TODO
-	 **/
-	private void initSocialShare(Bitmap arg0) {
-		controller = UMServiceFactory.getUMSocialService(
-				MainActivity.class.getName(), RequestType.SOCIAL);
-		controller.setShareContent("雅驰电子湘行一卡通");// 设置分享文字内容
-		controller.setShareMedia(new UMImage(MainActivity.this, arg0));// 设置分享图片内容
-		UMWXHandler.WX_APPID = "wx6e3d98ab86eb8acd";// 设置微信的Appid
-
-		// 添加微信平台
-		controller.getConfig().supportWXPlatform(MainActivity.this);
-
-		// 添加微信朋友圈
-		controller.getConfig().supportWXPlatform(
-				MainActivity.this,
-				UMServiceFactory.getUMWXHandler(MainActivity.this).setToCircle(
-						true));
-
-		UMWXHandler.CONTENT_URL = "http://www.ycic.com.cn/";// 微信图文分享必须设置一个url
-															// 默认"http://www.umeng.com"
-		UMWXHandler.WX_CONTENT_TITLE = "来自雅驰电子的分享";
-		UMWXHandler.WXCIRCLE_CONTENT_TITLE = "雅驰湘行一卡通";
-		controller.openShare(MainActivity.this, false);
-
-	}
-
-	@Override
-	public void onDestroy() {
-		mMapView.destroy();
-		if (mBMapManager != null) {
-			mBMapManager.destroy();
-			mBMapManager = null;
-		}
-		super.onDestroy();
-	}
-
-	/**
-	 * 初始化地图引擎
-	 * 
-	 * @Name initEngineManager
-	 * @Description TODO
-	 * @param context
-	 * 
-	 */
-	public void initEngineManager(Context context) {
-		if (mBMapManager == null) {
-			mBMapManager = new BMapManager(context);
-		}
-		if (!mBMapManager.init(MapConstant.strKey, new MapListener())) {
-			VToast.toast(context, "mBMapManager  初始化错误!");
-		}
-	}
-
 	/**
 	 * @Name initView
 	 * @Description TODO 初始化布局中的视图
 	 **/
 	private void initView() {
+		VLog.v("MainActivity--initView");
 		mMapView = (MapView) findViewById(R.id.bmapsView);
 		ImageView location_iv = (ImageView) findViewById(R.id.main_focus_iv);
 		location_iv.setOnClickListener(this);
@@ -307,92 +162,32 @@ public class MainActivity extends Activity implements OnClickListener {
 		ImageView setting = (ImageView) findViewById(R.id.main_setting_iv);
 		setting.setOnClickListener(this);
 
-
 		etdata = (EditText) findViewById(R.id.etdata);
 		btnsearch = (Button) findViewById(R.id.btncall);
 		btnsearch.setOnClickListener(this);
 
 	}
-
-	/*
-	 * 添加对back按钮的处理，点击提示退出 (non-Javadoc)
-	 * 
-	 * @see android.app.Activity#dispatchKeyEvent(android.view.KeyEvent)
-	 */
-	@Override
-	public boolean dispatchKeyEvent(KeyEvent event) {
-		if (event.getKeyCode() == KeyEvent.KEYCODE_BACK
-				&& event.getAction() != 1) {
-			exit();
-			return true;
-		}
-		return super.dispatchKeyEvent(event);
-	}
-
-	/*
-	 * 退出应用程序
-	 */
-	private void exit() {
-		new AlertDialog.Builder(MainActivity.this)
-				.setMessage(R.string.msg_exit)
-				.setIcon(R.drawable.icon)
-				.setPositiveButton(R.string.msg_ok,
-						new DialogInterface.OnClickListener() {
-
-							public void onClick(DialogInterface dialog,
-									int whichButton) {
-								app.exitApplication();
-							}
-						}).setNegativeButton(R.string.msg_cancel, null).show();
-	}
-
+	
 	/**
 	 * 删除所有标记
 	 */
 	public void removeAllMarker() {
+		VLog.v("MainActivity--removeAllMarker");
 		mMapView.getOverlays().remove(ov_markA);
 		mMapView.getOverlays().remove(ov_markB);
 		mMapView.getOverlays().remove(ov_markC);
 		mMapView.getOverlays().remove(ov_markD);
-
 		mMapView.refresh();
 	}
 	/**
 	 * 添加所有标记
 	 */
 	public void addAllMarker() {
-
+		VLog.v("MainActivity--addAllMarker");
 		addMarker(0);
 		addMarker(1);
 		addMarker(2);
 		addMarker(3);
-
-		focusMarker();
-	}
-
-	/**
-	 * @Name focusMarker
-	 * @Description TODO
-	 **/
-	private void focusMarker() {
-
-		// 长沙的中心，无定位时的地图中心
-		int cLat = 28148494;
-		int cLon = 113002065;
-		if (MapConstant.getCurrlocation() == null) {
-			mMapView.getController().setCenter(new GeoPoint(cLat, cLon));
-		} else if (cate_branchs != null && cate_branchs.size() >= 1) {
-			for (ArrayList<BranchModel> items : cate_branchs) {
-				if (items.size() > 0) {
-					BranchModel c = (BranchModel) items.get(0);
-					int currLat = (int) (Double.valueOf(c.getLatitude()) * 1000000);
-					int currLon = (int) (Double.valueOf(c.getLongitude()) * 1000000);
-					mMapView.getController().setCenter(
-							new GeoPoint(currLat, currLon));
-					break;
-				}
-			}
-		}
 	}
 
 	/**
@@ -400,33 +195,28 @@ public class MainActivity extends Activity implements OnClickListener {
 	 * @Description TODO
 	 **/
 	private void addMarker(int index) {
+		VLog.v("MainActivity--addMarker-"+index);
 		OverlayTest ov_mark = ov_markA;
 		int marker_res = R.drawable.icon_gcoding;
 		switch (index) {
 			case 0 :
-				ov_mark = ov_markA;
 				marker_res = R.drawable.icon_share_loc_add;
 				break;
 			case 1 :
-				ov_mark = ov_markB;
 				// marker_res = R.drawable.icon_share_loc_add;
 				break;
 			case 2 :
-				ov_mark = ov_markC;
 				marker_res = R.drawable.icon_mylocal_favd;
 				break;
 			case 3 :
-				ov_mark = ov_markD;
 				marker_res = R.drawable.icon_share_loc_add;
 				break;
 		}
-		if (cate_branchs != null && cate_branchs.size() != 0) {
-			if (ov_mark != null) {
-				mMapView.getOverlays().remove(ov_mark);
-			}
+		if (MapConstant.cate_branchs != null && MapConstant.cate_branchs.size() != 0) {
+
 			ov_mark = new OverlayTest(null, mMapView, false);
 
-			for (BranchModel content : cate_branchs.get(index)) {
+			for (BranchModel content : MapConstant.cate_branchs.get(index)) {
 				int latitude = (int) (Double.valueOf(content.getLatitude()) * 1000000);
 				int longitude = (int) (Double.valueOf(content.getLongitude()) * 1000000);
 
@@ -436,10 +226,23 @@ public class MainActivity extends Activity implements OnClickListener {
 				item.setMarker(d);
 				ov_mark.addItem(item);
 			}
+			switch (index) {
+				case 0 :
+					ov_markA = ov_mark;
+					break;
+				case 1 :
+					ov_markB = ov_mark;
+					break;
+				case 2 :
+					ov_markC = ov_mark;
+					break;
+				case 3 :
+					ov_markD = ov_mark;
+					break;
+			}
 			mMapView.getOverlays().add(ov_mark);
 			mMapView.refresh();
 		}
-
 	}
 
 	/**
@@ -450,6 +253,7 @@ public class MainActivity extends Activity implements OnClickListener {
 	 * 
 	 */
 	public void focusLocation() {
+		VLog.v("MainActivity--focusLocation");
 		if (MapConstant.getCurrlocation() == null) {
 			return;
 		}
@@ -471,7 +275,7 @@ public class MainActivity extends Activity implements OnClickListener {
 		mMapView.getOverlays().add(ovt_location);
 		mMapView.refresh();
 
-		mMapView.getController().setCenter(new GeoPoint(lat, lon));
+		mMapView.getController().animateTo(new GeoPoint(lat, lon));
 	}
 
 	/*
@@ -485,8 +289,8 @@ public class MainActivity extends Activity implements OnClickListener {
 			this.isLoc = isLoc;
 		}
 		protected boolean onTap(int index) {
-
-			showDetail(getItem(index).getTitle());
+			mMapView.getController().animateTo(getItem(index).getPoint());
+			showDetail(getItem(index).getTitle(), getItem(index).getPoint());
 			pop = new PopupOverlay(mMapView, new PopupClickListener() {
 				@Override
 				public void onClickedPopup(int index) {
@@ -513,23 +317,42 @@ public class MainActivity extends Activity implements OnClickListener {
 	 * @Description TODO
 	 * 
 	 */
-	private void showBottom() {
-		View v = View.inflate(context, R.layout.bottom_menu, null);
+	protected void showBottom() {
+		VLog.v("MainActivity--showBottom");
+		final View v = View.inflate(context, R.layout.bottom_menu, null);
+        LinearLayout geo = (LinearLayout) v.findViewById(R.id.bottom_geo_lay);
+        LinearLayout share = (LinearLayout) v.findViewById(R.id.bottom_share_lay);
+        LinearLayout about = (LinearLayout) v.findViewById(R.id.bottom_about_lay);
+        geo.setOnClickListener(this);
+        share.setOnClickListener(this);
+        about.setOnClickListener(this);
 
-		PopupWindow window = new PopupWindow(v, 500, 260);
-		window.setOutsideTouchable(true);
+        ViewTreeObserver vto2 = v.getViewTreeObserver();   
+        vto2.addOnGlobalLayoutListener(new OnGlobalLayoutListener() { 
+            @Override   
+            public void onGlobalLayout() { 
+            	int width = 0;
+                int height = 0;
+                v.getViewTreeObserver().removeGlobalOnLayoutListener(this);   
+                width = v.getWidth();
+                bottom_height=  height = v.getHeight();
+                PopupWindow window = new PopupWindow(v,  width,  height);
+        		window.setOutsideTouchable(true);
+             
+        		// 设置整个popupwindow的样式。
+        		window.setBackgroundDrawable(getResources().getDrawable(
+        				R.drawable.map_layer_background));
+        		// 使窗口里面的空间显示其相应的效果，比较点击button时背景颜色改变。
+        		// 如果为false点击相关的空间表面上没有反应，但事件是可以监听到的。
+        		// listview的话就没有了作用。
+        		window.setAnimationStyle(R.style.SlideBottomAnimationLong);
+        		window.setFocusable(true);
+        		window.update();
+        		window.showAtLocation(mMapView, Gravity.CENTER_HORIZONTAL
+        				| Gravity.BOTTOM, 0, 0);
+            }   
+        });   
 
-		// 设置整个popupwindow的样式。
-		window.setBackgroundDrawable(getResources().getDrawable(
-				R.drawable.map_layer_background));
-		// 使窗口里面的空间显示其相应的效果，比较点击button时背景颜色改变。
-		// 如果为false点击相关的空间表面上没有反应，但事件是可以监听到的。
-		// listview的话就没有了作用。
-		window.setAnimationStyle(R.style.SlideBottomAnimation);
-		window.setFocusable(true);
-		window.update();
-		window.showAtLocation(mMapView, Gravity.CENTER_HORIZONTAL
-				| Gravity.BOTTOM, 0, 0);
 
 	}
 
@@ -540,14 +363,18 @@ public class MainActivity extends Activity implements OnClickListener {
 	 * @Description TODO
 	 * 
 	 */
-	private void showDetail(String title) {
+	private void showDetail(String title, GeoPoint point) {
+		VLog.v("MainActivity--showDetail");
 		View v = View.inflate(context, R.layout.point_detail, null);
 
 		Button btn_left = (Button) v.findViewById(R.id.point_left_btn);
 		btn_left.setOnClickListener(this);
 		TextView tv_title = (TextView) v.findViewById(R.id.point_detail_tv);
+		TextView tv_add = (TextView) v.findViewById(R.id.point_add_tv);
 		tv_title.setText(title);
-		PopupWindow window = new PopupWindow(v, 500, 260);
+		tv_add.setText(point.getLatitudeE6()+":"+point.getLongitudeE6());
+		
+		PopupWindow window = new PopupWindow(v, v.getWidth(), v.getHeight());
 
 		// 设置整个popupwindow的样式。
 		window.setBackgroundDrawable(getResources().getDrawable(
@@ -582,11 +409,10 @@ public class MainActivity extends Activity implements OnClickListener {
 				layer_Dialog.dismiss();
 				break;
 			case R.id.main_focus_iv :
-
 				int lat = (int) (MapConstant.getCurrlocation().getLatitude() * 1000000);
 				int lon = (int) (MapConstant.getCurrlocation().getLongitude() * 1000000);
 				VLog.v("focusLocation-" + lat + "," + lon);
-				mMapView.getController().setCenter(new GeoPoint(lat, lon));
+				mMapView.getController().animateTo(new GeoPoint(lat, lon));
 				break;
 			case R.id.main_setting_iv :
 				showSetting();
@@ -603,12 +429,82 @@ public class MainActivity extends Activity implements OnClickListener {
 				mMapView.getCurrentMap();
 				showLoading();
 				break;
-			case R.id.btncall :// 搜索
+			case R.id.bottom_geo_lay :// 选择网点
+				showGeotableSel();
+				break;
 				
+			case R.id.btncall :// 搜索
 
 				break;
 		}
 	}
+
+	/** 
+	 * @Name showGeotableSel 
+	 * @Description TODO  
+	**/
+	private void showGeotableSel() {
+		VLog.v("MainActivity--showGeotableSel");
+		final View v = View.inflate(context, R.layout.bottom_geo, null);
+		RadioGroup geo_rg = (RadioGroup) v.findViewById(R.id.bottom_geo_rg);
+		geo_rg.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			
+			@Override
+			public void onCheckedChanged(RadioGroup group, int checkedId) {
+				switch (checkedId) {
+					case 0 :
+						removeAllMarker();
+						addAllMarker();
+						break;
+					case 1 :
+						removeAllMarker();
+						addMarker(0);
+						break;
+					case 2 :
+						removeAllMarker();
+						addMarker(1);
+						break;
+					case 3 :
+						removeAllMarker();
+						addMarker(2);
+						break;
+					case 4 :
+						removeAllMarker();
+						addMarker(3);
+						break;
+				}
+				
+			}
+		});
+
+		ViewTreeObserver vto2 = v.getViewTreeObserver();   
+        vto2.addOnGlobalLayoutListener(new OnGlobalLayoutListener() { 
+            @Override   
+            public void onGlobalLayout() { 
+            	int width = 0;
+                int height = 0;
+                v.getViewTreeObserver().removeGlobalOnLayoutListener(this);   
+                width = v.getWidth();
+                bottom_height=  height = v.getHeight();
+                PopupWindow window = new PopupWindow(v,  width,  height);
+        		window.setOutsideTouchable(true);
+             
+        		// 设置整个popupwindow的样式。
+        		window.setBackgroundDrawable(getResources().getDrawable(
+        				R.drawable.map_layer_background));
+        		// 使窗口里面的空间显示其相应的效果，比较点击button时背景颜色改变。
+        		// 如果为false点击相关的空间表面上没有反应，但事件是可以监听到的。
+        		// listview的话就没有了作用。
+        		window.setAnimationStyle(R.style.SlideBottomAnimationLong);
+        		window.setFocusable(true);
+        		window.update();
+        		window.showAtLocation(mMapView, Gravity.CENTER_HORIZONTAL
+        				| Gravity.BOTTOM, 0, bottom_height);
+            }   
+        });   
+
+	}
+
 
 	/**
 	 * @Name showLoading
@@ -621,11 +517,11 @@ public class MainActivity extends Activity implements OnClickListener {
 
 		tv_tip.setText("正在截图");
 		loading.setContentView(view);
-		loading.setCancelable(false);
+		loading.setCancelable(true);
 		loading.setOnDismissListener(new OnDismissListener() {
 			@Override
 			public void onDismiss(DialogInterface arg0) {
-
+                       
 			}
 		});
 		loading.show();
@@ -682,28 +578,7 @@ public class MainActivity extends Activity implements OnClickListener {
 					spinner.setTag(position);
 					setting_Dialog.dismiss();
 				}
-				switch (position) {
-					case 0 :
-						removeAllMarker();
-						addAllMarker();
-						break;
-					case 1 :
-						removeAllMarker();
-						addMarker(0);
-						break;
-					case 2 :
-						removeAllMarker();
-						addMarker(1);
-						break;
-					case 3 :
-						removeAllMarker();
-						addMarker(2);
-						break;
-					case 4 :
-						removeAllMarker();
-						addMarker(3);
-						break;
-				}
+				
 
 			}
 
@@ -788,113 +663,6 @@ public class MainActivity extends Activity implements OnClickListener {
 		lp.alpha = 0.9f; // 透明度
 		dialogWindow.setAttributes(lp);
 		aboutDialog.show();
-	}
-
-	/**
-	 * 常用事件监听，用来处理通常的网络错误，授权验证错误等
-	 * 
-	 * @ClassName MapListener
-	 * @Description TODO
-	 * @Version 1.0
-	 * @Creation 2013-8-19 下午3:47:48
-	 * @Mender xiaoyl
-	 * @Modification 2013-8-19 下午3:47:48
-	 * 
-	 */
-	class MapListener implements MKGeneralListener {
-		@Override
-		public void onGetNetworkState(int iError) {
-			if (iError == MKEvent.ERROR_NETWORK_CONNECT) {
-				VToast.toast(context, "您的网络出错啦！");
-			} else if (iError == MKEvent.ERROR_NETWORK_DATA) {
-				VToast.toast(context, "输入正确的检索条件！");
-			}
-		}
-
-		@Override
-		public void onGetPermissionState(int iError) {
-			if (iError == MKEvent.ERROR_PERMISSION_DENIED) {
-				VToast.toast(context, "请输入正确的授权Key！");
-			}
-		}
-	}
-
-	/**
-	 * 截图回调
-	 * 
-	 * @ClassName MapShotCut
-	 * @Description TODO
-	 * @Version 1.0
-	 * @Creation 2013-9-3 上午10:10:20
-	 * @Mender xiaoyl
-	 * @Modification 2013-9-3 上午10:10:20
-	 * 
-	 */
-	class MapShotCutListener implements MKMapViewListener {
-
-		/**
-		 * @Name onClickMapPoi
-		 * @Description TODO
-		 * @param arg0
-		 * @see com.baidu.mapapi.map.MKMapViewListener#onClickMapPoi(com.baidu.mapapi.map.MapPoi)
-		 * @Date 2013-9-3 上午10:10:05
-		 **/
-		@Override
-		public void onClickMapPoi(MapPoi arg0) {
-			// TODO Auto-generated method stub
-
-		}
-
-		/**
-		 * @Name onGetCurrentMap
-		 * @Description TODO
-		 * @param arg0
-		 * @see com.baidu.mapapi.map.MKMapViewListener#onGetCurrentMap(android.graphics.Bitmap)
-		 * @Date 2013-9-3 上午10:10:05
-		 **/
-		@Override
-		public void onGetCurrentMap(Bitmap arg0) {
-			// TODO Auto-generated method stub
-			initSocialShare(arg0);
-			loading.dismiss();
-		}
-
-		/**
-		 * @Name onMapAnimationFinish
-		 * @Description TODO
-		 * @see com.baidu.mapapi.map.MKMapViewListener#onMapAnimationFinish()
-		 * @Date 2013-9-3 上午10:10:05
-		 **/
-		@Override
-		public void onMapAnimationFinish() {
-			// TODO Auto-generated method stub
-
-		}
-
-		/**
-		 * @Name onMapLoadFinish
-		 * @Description TODO
-		 * @see com.baidu.mapapi.map.MKMapViewListener#onMapLoadFinish()
-		 * @Date 2013-9-3 上午10:10:05
-		 **/
-		@Override
-		public void onMapLoadFinish() {
-			// TODO Auto-generated method stub
-
-		}
-
-		/**
-		 * @Name onMapMoveFinish
-		 * @Description TODO
-		 * @see com.baidu.mapapi.map.MKMapViewListener#onMapMoveFinish()
-		 * @Date 2013-9-3 上午10:10:05
-		 **/
-		@Override
-		public void onMapMoveFinish() {
-			// TODO Auto-generated method stub
-
-		}
-
 	}
 
 }

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" >
+   
+    <HorizontalScrollView 
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal">
+        <RadioGroup 
+            android:id="@+id/bottom_geo_rg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            
+            android:orientation="horizontal">
+        <RadioButton 
+            android:id="@+id/bottom_geo_all"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/geo_all"/>
+    
+        <RadioButton 
+            android:id="@+id/bottom_geo_a"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/geo_a"/>
+      
+        <RadioButton 
+            android:id="@+id/bottom_geo_b"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/geo_b"/>
+        <RadioButton 
+            android:id="@+id/bottom_geo_c"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/geo_c"/>
+        <RadioButton 
+            android:id="@+id/bottom_geo_d"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/geo_d"/>
+        </RadioGroup>
+    </HorizontalScrollView>
+
+</RelativeLayout>

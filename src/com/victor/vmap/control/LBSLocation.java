@@ -74,7 +74,6 @@ public class LBSLocation {
 	public class MyLocationListenner implements BDLocationListener {
 		@Override
 		public void onReceiveLocation(BDLocation location) {
-			VLog.v("location---" + location);
 			if (location == null) {
 				VToast.toast(app, "定位失败了，重新定位中 ");
 				startLocation();
@@ -86,7 +85,7 @@ public class LBSLocation {
 				MapConstant.mapActivity.focusLocation();
 			}
 			// VToast.toast(app, "位置为+"+sb.toString());
-			VLog.v("location---" + location);
+			VLog.v("location---" + location.getAddrStr());
 			mLocationClient.stop();
 		}
 
