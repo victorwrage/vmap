@@ -6,7 +6,7 @@
  * @Creation 2013-9-3 上午9:23:27   
  * @Copyright Copyright © 2009 - 2013 Victor.All Rights Reserved.
  **/
-package com.victor.vmap.provider;
+package com.victor.vmap;
 
 import java.util.List;
 
@@ -28,8 +28,6 @@ import android.net.Uri;
  * @Modification 2013-9-3 上午9:23:27
  **/
 public class SearchProvider extends ContentProvider {
-	// 记住这个哦
-	public final static String AUTHORITY = "com.victor.vmap.provider.SearchProvider";
 
 	/**
 	 * @Name delete
@@ -84,8 +82,10 @@ public class SearchProvider extends ContentProvider {
 	 **/
 	@Override
 	public boolean onCreate() {
+		// 添加所有的数据
+		SearchUtils.getInstance().ensureLoaded();
+		return true;
 
-		return false;
 	}
 	/**
 	 * @Name query

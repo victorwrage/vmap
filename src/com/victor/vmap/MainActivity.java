@@ -1,11 +1,6 @@
 package com.victor.vmap;
 
 import java.util.ArrayList;
-import java.util.List;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import com.baidu.mapapi.BMapManager;
 import com.baidu.mapapi.MKGeneralListener;
@@ -32,13 +27,9 @@ import com.umeng.socialize.media.UMImage;
 import com.umeng.update.UmengUpdateAgent;
 import com.victor.vmap.control.BranchModel;
 import com.victor.vmap.provider.BranchDbHelper;
-import com.victor.vmap.provider.SearchProvider;
-import com.victor.vmap.utils.LBSCloudSearch;
 import com.victor.vmap.utils.MapConstant;
-import com.victor.vmap.utils.ScreenShot;
 import com.victor.vmap.utils.SearchUtils;
 import com.victor.vmap.utils.SearchUtils.Word;
-import com.victor.vmap.utils.Utils;
 import com.yachi.library_yachi.VLog;
 import com.yachi.library_yachi.VToast;
 import com.yachi.library_yachi.utils.ApplicationInfoUtil;
@@ -46,50 +37,33 @@ import com.yachi.library_yachi.utils.ApplicationInfoUtil;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.DialogInterface.OnDismissListener;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
-import android.location.Location;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.provider.SearchRecentSuggestions;
 import android.util.DisplayMetrics;
-import android.view.ContextMenu;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ContextMenu.ContextMenuInfo;
-import android.view.View.MeasureSpec;
 import android.view.View.OnClickListener;
-import android.view.View.OnGenericMotionListener;
-import android.view.View.OnLongClickListener;
 import android.view.View.OnTouchListener;
-import android.view.ViewGroup;
-import android.view.ViewGroup.LayoutParams;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.PopupWindow;
-import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
+
 
 public class MainActivity extends Activity implements OnClickListener {
 	private VMapApplication app;
@@ -147,10 +121,8 @@ public class MainActivity extends Activity implements OnClickListener {
 			launchWord(theWord);
             finish();
 		}else{
-			
 			Button search_btn = (Button) findViewById(R.id.btncall);
 			search_btn.setOnTouchListener(new OnTouchListener() {
-				
 				@Override
 				public boolean onTouch(View v, MotionEvent event) {
 					onSearchRequested();

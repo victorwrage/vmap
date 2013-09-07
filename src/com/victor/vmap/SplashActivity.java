@@ -65,7 +65,7 @@ public class SplashActivity extends Activity {
 							}
 						}
 					}
-					if (count > 3) {
+					if (count > 4) {
 						finish();
 						startActivity(new Intent(context, MainActivity.class));
 					}

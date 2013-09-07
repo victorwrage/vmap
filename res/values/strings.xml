@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+
+	<string name="search_label">xxxs</string>
+	<string name="settings_description">Definitions of words</string>
+	<string name="search_invoke">sss</string>
+	<string name="search_query_results">ssdsadws</string>
+	
     <string name="app_name">雅驰售卡网点分布图</string>
 
     <string name="msg_exit">确定退出雅驰售卡网点分布图?</string>
