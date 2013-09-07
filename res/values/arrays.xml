@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2011 The Android Open Source Project
+<!--
+     Copyright (C) 2011 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -15,18 +16,35 @@
 -->
 
 <resources>
+
     <string-array name="sections">
+        <item>长沙市</item>
         <item>芙蓉区</item>
         <item>开福区</item>
         <item>天心区</item>
         <item>岳麓区</item>
         <item>雨花区</item>
-        <item>望城区</item>
     </string-array>
-    
     <string-array name="distance">
+        <item>限定距离</item>
         <item>1公里</item>
         <item>5公里</item>
         <item>10公里</item>
     </string-array>
+    
+    <string-array name="shop_type">
+        <item>所有网点</item>
+        <item>A类网点</item>
+        <item>B类网点</item>
+        <item>C类网点</item>
+        <item>自有网点</item>
+    </string-array>
+    
+    <string-array name="geotable_ids">
+        <item>31930</item>
+        <item>32425</item>
+        <item>32426</item>
+        <item>31669</item>
+    </string-array>
+
 </resources>

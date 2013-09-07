@@ -1,19 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">长沙雅驰一卡通销售点</string>
+    <string name="app_name">雅驰售卡网点分布图</string>
 
-    <string name="msg_exit">确定退出程序?</string>
+    <string name="msg_exit">确定退出雅驰售卡网点分布图?</string>
     <string name="msg_ok">确定</string>
     <string name="msg_cancel">取消</string>
-
-    <string name="action_label_refresh">刷新</string>
-    <string name="action_label_search">搜索销售点</string>
     
-    <string name="action_label_nearby">按距离标识</string>
-
+    <string name="tab_about">关于</string>
+    <string name="tab_layer">图层</string>
+    <string name="tab_filter">过滤</string>
     
-    <string name="action_label_add">按范围标识</string>
+    
+    <string name="search_label">搜销售点</string>
+    <string name="search_hint">请输入关键字</string>
+    <string name="settings_description">设置</string>
+    <string name="search_invoke">语音搜索</string>
+    
+    
+    <string name="frame_type_plain">平面图</string>
+    <string name="frame_type_satellite">卫星图</string>
 
 
 </resources>

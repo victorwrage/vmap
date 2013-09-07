@@ -8,16 +8,12 @@
 **/
 package com.victor.vmap;
 
-import java.util.ArrayList;
-import java.util.List;
-
-
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Handler;
 
-import com.baidu.location.BDLocation;
+import com.victor.vmap.control.LBSLocation;
 import com.yachi.library_yachi.VApplication;
 
 
@@ -33,14 +29,9 @@ import com.yachi.library_yachi.VApplication;
 public class VMapApplication extends VApplication {
 	protected static VMapApplication instance;
 	private Handler handler;
-	// 定位结果
-	public BDLocation currlocation = null;
+	public  String networkType;
 	
-	public static String networkType;
-	
-
-
-	public static VApplication getInstance() {
+	public static VMapApplication getInstance() {
 		return instance;
 	}
 	
@@ -54,18 +45,16 @@ public class VMapApplication extends VApplication {
 	public void onCreate() {
 		super.onCreate();
 		instance = this;
-		networkType = setNetworkType();
+		networkType = getNetworkType();
 		// 启动定位
 		LBSLocation.getInstance(this).startLocation();
 	}
-	
 
-	
 	/**
 	 * 设置手机网络类型，wifi，cmwap，ctwap，用于联网参数选择
 	 * @return
 	 */
-	static String setNetworkType() {
+	static String getNetworkType() {
 		String networkType = "wifi";
 		ConnectivityManager manager = (ConnectivityManager) instance
 				.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -89,7 +78,6 @@ public class VMapApplication extends VApplication {
 			} else {
 				networkType = "cmwap";
 			}
-
 		}
 		return networkType;
 	}

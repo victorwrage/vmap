@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">雅驰卡通分布图</string>
+
+    <string name="msg_exit">确定退出程序?</string>
+    <string name="msg_ok">确定</string>
+    <string name="msg_cancel">取消</string>
+    
+    <string name="tab_about">关于</string>
+    <string name="tab_layer">图层</string>
+    <string name="tab_filter">过滤</string>
+    
+    
+    <string name="frame_type_plain">平面图</string>
+    <string name="frame_type_satellite">卫星图</string>
+
+
+</resources>

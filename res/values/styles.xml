@@ -14,15 +14,64 @@
      limitations under the License.
 -->
 
-<resources>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
 
+  <style name="myDialog" parent="@android:style/Theme.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+  <style name="Dialog" parent="android:style/Theme.Dialog">
+        <item name="android:windowBackground">@null</item>
+
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+    </style>
+    <style name="DialogText">
+        <item name="android:textColor">#FF000000</item>
+
+        <item name="android:textSize">12sp</item>
+    </style>
+ 
+    <style name="DialogText.Title">
+        <item name="android:textSize">16sp</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    
+    <style name="leftButton" parent="@android:style/Widget.Button">
+         <item name="android:layout_width">match_parent</item>
+         <item name="android:layout_height">50dp</item>
+         <item name="android:background">@drawable/main_leftbutton</item>
+    </style>
+    
+    
+     <style name="rightButton" parent="@android:style/Widget.Button">
+         <item name="android:layout_width">match_parent</item>
+         <item name="android:layout_height">50dp</item>
+         <item name="android:background">@drawable/main_rightbutton</item>
+    </style>
+    
+      <style name="SlideBottomAnimation">  
+        <item name="android:windowEnterAnimation">@anim/slidein_frombottom</item>  
+        <item name="android:windowExitAnimation">@anim/slideout_frombottom</item>  
+    </style> 
+     
+    
+    <style name="dialog" parent="@android:style/Theme.Dialog">
+
+        <item name="android:windowIsFloating">true</item><!--是否浮现在activity之上-->
+        <item name="android:windowIsTranslucent">false</item><!--半透明-->
+        <item name="android:windowNoTitle">true</item><!--无标题-->
+        <item name="android:windowBackground">@color/transparent</item><!--背景透明-->
+        <item name="android:backgroundDimEnabled">false</item><!--模糊-->
+    </style>
+    
   
-
-    <!-- the following can be used to style the overflow menu button
-         only do this if you have an *extremely* good reason to!! -->
-    <!--<style name="MyOverflowButton" parent="Widget.Sherlock.ActionButton.Overflow">
-        <item name="android:src">@drawable/ic_menu_view</item>
-        <item name="android:background">@drawable/action_button_background</item>
-    </style>-->
 
 </resources>

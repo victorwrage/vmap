@@ -1,0 +1,622 @@
+package com.victor.vmap;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import com.baidu.mapapi.BMapManager;
+import com.baidu.mapapi.MKGeneralListener;
+import com.baidu.mapapi.map.ItemizedOverlay;
+import com.baidu.mapapi.map.MKEvent;
+import com.baidu.mapapi.map.MapController;
+import com.baidu.mapapi.map.MapView;
+import com.baidu.mapapi.map.OverlayItem;
+import com.baidu.mapapi.map.PopupClickListener;
+import com.baidu.mapapi.map.PopupOverlay;
+import com.baidu.platform.comapi.basestruct.GeoPoint;
+import com.umeng.analytics.MobclickAgent;
+import com.umeng.update.UmengDownloadListener;
+import com.umeng.update.UmengUpdateAgent;
+import com.victor.vmap.control.ContentModel;
+import com.victor.vmap.control.LBSLocation;
+import com.victor.vmap.utils.LBSCloudSearch;
+import com.victor.vmap.utils.MapConstant;
+import com.yachi.library_yachi.VLog;
+import com.yachi.library_yachi.VToast;
+import com.yachi.library_yachi.utils.ApplicationInfoUtil;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+import android.location.Location;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.util.DisplayMetrics;
+import android.view.ContextMenu;
+import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ContextMenu.ContextMenuInfo;
+import android.view.View.MeasureSpec;
+import android.view.View.OnClickListener;
+import android.view.View.OnGenericMotionListener;
+import android.view.View.OnLongClickListener;
+import android.view.View.OnTouchListener;
+import android.view.ViewGroup;
+import android.view.ViewGroup.LayoutParams;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+public class MainActivity extends Activity implements OnClickListener {
+	private VMapApplication app;
+	private Context context;
+
+	private BMapManager mBMapManager = null;
+	private MapView mMapView = null;
+	/** 关于、视图、设置 对话框 */
+	private Dialog aboutDialog, layer_Dialog, setting_Dialog;
+	/** 描点标记、定位标记 */
+	private OverlayTest ov_mark, ovt_location;
+	private PopupOverlay pop;
+
+	/** 设置超时 */
+	public static final int MSG_NET_TIMEOUT = 100;
+	public static final int MSG_NET_STATUS_ERROR = 200;
+	public static final int MSG_NET_SUCC = 1;
+
+	/*
+	 * 处理网络请求
+	 */
+	private final Handler mHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			switch (msg.what) {
+				case MSG_NET_TIMEOUT :
+					break;
+				case MSG_NET_STATUS_ERROR :
+					break;
+				case MSG_NET_SUCC :
+					String result = msg.obj.toString();
+					try {
+						JSONObject json = new JSONObject(result);
+						parser(json);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+					break;
+			}
+		}
+	};
+
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		context = this;
+		MapConstant.mapActivity = this;
+		app = (VMapApplication) VMapApplication.getInstance();
+		app.addActivitys(this);
+		app.setHandler(mHandler);
+		UmengUpdateAgent.update(this);// 加入更新
+		UmengUpdateAgent.setUpdateOnlyWifi(false);
+		MobclickAgent.onError(this);// 加入出错报告
+
+		initEngineManager(this);
+
+		setContentView(R.layout.activity_main);
+
+		initView();
+
+	}
+
+	@Override
+	public void onPause() {
+		mMapView.onPause();
+		if (mBMapManager != null) {
+			mBMapManager.stop();
+		}
+		mMapView.setKeepScreenOn(false);
+		removeAllMarker();
+		super.onPause();
+		MobclickAgent.onPause(this);
+	}
+
+	@Override
+	public void onResume() {
+		mMapView.onResume();
+		if (mBMapManager != null) {
+			mBMapManager.start();
+		}
+		mMapView.setKeepScreenOn(true);
+		addAllMarker();
+		super.onResume();
+		MobclickAgent.onResume(this);
+		focusLocation();
+		LBSCloudSearch.loadData(2, "&region=长沙市");
+	}
+
+	@Override
+	public void onDestroy() {
+		mMapView.destroy();
+		if (mBMapManager != null) {
+			mBMapManager.destroy();
+			mBMapManager = null;
+		}
+		super.onDestroy();
+	}
+
+	/**
+	 * 初始化地图引擎
+	 * 
+	 * @Name initEngineManager
+	 * @Description TODO
+	 * @param context
+	 * 
+	 */
+	public void initEngineManager(Context context) {
+		if (mBMapManager == null) {
+			mBMapManager = new BMapManager(context);
+		}
+		if (!mBMapManager.init(MapConstant.strKey, new MapListener())) {
+			VToast.toast(context, "mBMapManager  初始化错误!");
+		}
+	}
+
+	/**
+	 * @Name initView
+	 * @Description TODO 初始化布局中的视图
+	 **/
+	private void initView() {
+		mMapView = (MapView) findViewById(R.id.bmapsView);
+		ImageView location_iv = (ImageView) findViewById(R.id.main_focus_iv);
+		location_iv.setOnClickListener(this);
+		mMapView.setBuiltInZoomControls(true);
+
+		MapController mMapController = mMapView.getController();
+		mMapController.setZoom(12);
+
+		ImageView setting = (ImageView) findViewById(R.id.main_setting_iv);
+		setting.setOnClickListener(this);
+	}
+
+	
+	/*
+	 * 添加对back按钮的处理，点击提示退出 (non-Javadoc)
+	 * 
+	 * @see android.app.Activity#dispatchKeyEvent(android.view.KeyEvent)
+	 */
+	@Override
+	public boolean dispatchKeyEvent(KeyEvent event) {
+		if (event.getKeyCode() == KeyEvent.KEYCODE_BACK
+				&& event.getAction() != 1) {
+			exit();
+			return true;
+		}
+		return super.dispatchKeyEvent(event);
+	}
+	/*
+	 * 解析返回数据
+	 */
+	private void parser(JSONObject json) {
+		VMapApplication app = (VMapApplication) getApplication();
+		List<ContentModel> list = MapConstant.getList();
+		if (list != null) {
+			for (int s = list.size() - 1; s >= 0; s--) {
+				list.remove(s);
+			}
+		}
+		VLog.v("parser--json" + json.toString());
+
+		try {
+			JSONArray jsonArray = json.getJSONArray("contents");
+			if (jsonArray != null && jsonArray.length() <= 0) {
+				VToast.toast(app, "没有符合要求的地点");
+			} else {
+				for (int i = 0; i < jsonArray.length(); i++) {
+					JSONObject jsonObject2 = (JSONObject) jsonArray.opt(i);
+					ContentModel content = new ContentModel();
+					content.setName(jsonObject2.getString("title"));
+					content.setAddr(jsonObject2.getString("address"));
+					content.setDistance(jsonObject2.getString("distance") + "米");
+					JSONArray locArray = jsonObject2.getJSONArray("location");
+					double latitude = locArray.getDouble(1);
+					double longitude = locArray.getDouble(0);
+					content.setLatitude(latitude);
+					content.setLongitude(longitude);
+					float results[] = new float[1];
+					if (MapConstant.getCurrlocation() != null) {
+						Location.distanceBetween(MapConstant.getCurrlocation()
+								.getLatitude(), MapConstant.getCurrlocation()
+								.getLongitude(), latitude, longitude, results);
+					}
+					content.setDistance((int) results[0] + "米");
+					list.add(content);
+				}
+			}
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+
+		MapConstant.mapActivity.removeAllMarker();
+		MapConstant.mapActivity.addAllMarker();
+	}
+
+	/*
+	 * 退出应用程序
+	 */
+	private void exit() {
+		new AlertDialog.Builder(MainActivity.this)
+				.setMessage(R.string.msg_exit)
+				.setIcon(R.drawable.icon)
+				.setPositiveButton(R.string.msg_ok,
+						new DialogInterface.OnClickListener() {
+
+							public void onClick(DialogInterface dialog,
+									int whichButton) {
+								app.exitApplication();
+							}
+						}).setNegativeButton(R.string.msg_cancel, null).show();
+	}
+
+	/**
+	 * 删除所有标记
+	 */
+	public void removeAllMarker() {
+		mMapView.getOverlays().remove(ov_mark);
+		mMapView.refresh();
+	}
+	/**
+	 * 添加所有标记
+	 */
+	public void addAllMarker() {
+
+		VLog.v("addAllMarker" + MapConstant.getList().size());
+		List<ContentModel> list = MapConstant.getList();
+		if (list != null && list.size() != 0) {
+			if (ov_mark != null) {
+				mMapView.getOverlays().remove(ov_mark);
+			}
+			ov_mark = new OverlayTest(null, mMapView, false);
+
+			for (ContentModel content : list) {
+				int latitude = (int) (content.getLatitude() * 1000000);
+				int longitude = (int) (content.getLongitude() * 1000000);
+
+				Drawable d = getResources().getDrawable(R.drawable.icon_gcoding);
+				OverlayItem item = new OverlayItem(new GeoPoint(latitude,
+						longitude), content.getName(), content.getAddr());
+				item.setMarker(d);
+				ov_mark.addItem(item);
+			}
+			mMapView.getOverlays().add(ov_mark);
+			mMapView.refresh();
+		}
+
+		// 长沙的中心，无定位时的地图中心
+		int cLat = 28148494;
+		int cLon = 113002065;
+		if (MapConstant.getCurrlocation() == null) {
+			mMapView.getController().setCenter(new GeoPoint(cLat, cLon));
+		} else if (list != null && list.size() >= 1) {
+			ContentModel c = (ContentModel) list.get(0);
+			int currLat = (int) (c.getLatitude() * 1000000);
+			int currLon = (int) (c.getLongitude() * 1000000);
+			mMapView.getController().setCenter(new GeoPoint(currLat, currLon));
+		}
+	}
+
+	/**
+	 * 视角移到当前位置
+	 * 
+	 * @Name focusLoacation
+	 * @Description TODO
+	 * 
+	 */
+	public void focusLocation() {
+         if(MapConstant.getCurrlocation()==null){
+        	 return;
+         }
+		int lat = (int) (MapConstant.getCurrlocation().getLatitude() * 1000000);
+		int lon = (int) (MapConstant.getCurrlocation().getLongitude() * 1000000);
+
+		VLog.v("focusLocation-" + lat + "," + lon);
+		if (ovt_location != null) {
+			//mMapView.getOverlays().remove(ovt_location);
+		}
+		ovt_location = new OverlayTest(null, mMapView, true);
+
+		Drawable d = getResources().getDrawable(R.drawable.icon_myloc);
+		OverlayItem item = new OverlayItem(new GeoPoint(lat, lon), MapConstant
+				.getCurrlocation().getPoi(), MapConstant.getCurrlocation()
+				.getAddrStr());
+		item.setMarker(d);
+		ovt_location.addItem(item);
+		mMapView.getOverlays().add(ovt_location);
+		mMapView.refresh();
+
+		mMapView.getController().setCenter(new GeoPoint(lat, lon));
+	}
+
+	/*
+	 * 要处理overlay点击事件时需要继承ItemizedOverlay 不处理点击事件时可直接生成ItemizedOverlay.
+	 */
+	class OverlayTest extends ItemizedOverlay<OverlayItem> {
+		// 用MapView构造ItemizedOverlay
+		boolean isLoc = false;
+		public OverlayTest(Drawable mark, MapView mapView, boolean isLoc) {
+			super(mark, mapView);
+			this.isLoc = isLoc;
+		}
+		protected boolean onTap(int index) {
+
+			pop = new PopupOverlay(mMapView, new PopupClickListener() {
+				@Override
+				public void onClickedPopup(int index) {
+					// 在此处理pop点击事件，index为点击区域索引,点击区域最多可有三个
+				}
+			});
+
+			View popview = null;
+			if (isLoc) {
+				popview = LayoutInflater.from(context).inflate(
+						R.layout.location_pop, null);
+				TextView textV = (TextView) popview.findViewById(R.id.text_pop);
+				String text = "我的位置";
+				VLog.v("location_pop"+text);
+				textV.setText(text);
+			} else {
+				popview = LayoutInflater.from(context).inflate(
+						R.layout.marker_pop, null);
+				TextView textV = (TextView) popview.findViewById(R.id.text_pop);
+				String text = MapConstant.getList().get(index).getName();
+				textV.setText(text);
+			}
+
+
+			pop.showPopup(convertViewToBitMap(popview), getItem(index)
+					.getPoint(), 28);
+
+			return true;
+		}
+		public boolean onTap(GeoPoint pt, MapView mapView) {
+			// 在此处理MapView的点击事件，当返回 true时
+			if (pop != null) {
+				pop.hidePop();
+			}
+			super.onTap(pt, mapView);
+			return false;
+		}
+	}
+
+	private Bitmap convertViewToBitMap(View v) {
+		// 启用绘图缓存
+		v.setDrawingCacheEnabled(true);
+		// 调用下面这个方法非常重要，如果没有调用这个方法，得到的bitmap为null
+		v.measure(MeasureSpec.makeMeasureSpec(210, MeasureSpec.EXACTLY),
+				MeasureSpec.makeMeasureSpec(120, MeasureSpec.EXACTLY));
+		// 这个方法也非常重要，设置布局的尺寸和位置
+		v.layout(0, 0, v.getMeasuredWidth() + 20, v.getMeasuredHeight());
+		// 获得绘图缓存中的Bitmap
+		v.buildDrawingCache();
+		return v.getDrawingCache();
+	}
+
+	/**
+	 * @Name onClick
+	 * @Description TODO
+	 * @param arg0
+	 * @see android.view.View.OnClickListener#onClick(android.view.View)
+	 * @Date 2013-8-16 上午10:07:34
+	 **/
+	@Override
+	public void onClick(View view) {
+
+		switch (view.getId()) {
+			case R.id.frame_plain_iv :
+				mMapView.setSatellite(false);
+				layer_Dialog.dismiss();
+				break;
+			case R.id.frame_satellite_iv :
+				mMapView.setSatellite(true);
+				layer_Dialog.dismiss();
+				break;
+			case R.id.main_focus_iv :
+
+				int lat = (int) (MapConstant.getCurrlocation().getLatitude() * 1000000);
+				int lon = (int) (MapConstant.getCurrlocation().getLongitude() * 1000000);
+				VLog.v("focusLocation-" + lat + "," + lon);
+				mMapView.getController().setCenter(new GeoPoint(lat, lon));
+				break;
+			case R.id.main_setting_iv :
+				showSetting();
+				break;
+			case R.id.setting_frame_btn :
+				showLayer();
+				setting_Dialog.dismiss();
+				break;
+			case R.id.setting_about_btn :
+				setting_Dialog.dismiss();
+				showAbout();
+				break;
+				
+		}
+	}
+
+	/**
+	 * @Name showSetting
+	 * @Description TODO
+	 **/
+	private void showSetting() {
+		setting_Dialog = new Dialog(this);
+		View layer_view = LayoutInflater.from(this).inflate(
+				R.layout.dialog_setting_lay, null);
+
+		setting_Dialog.setCanceledOnTouchOutside(true);
+		setting_Dialog.setCancelable(true);
+		setting_Dialog.setContentView(layer_view);
+		setting_Dialog.setTitle("设置");
+
+		Button frame_plain_btn = (Button) layer_view
+				.findViewById(R.id.setting_frame_btn);
+
+		Button frame_about_btn = (Button) layer_view
+				.findViewById(R.id.setting_about_btn);
+
+		frame_plain_btn.setOnClickListener(this);
+		frame_about_btn.setOnClickListener(this);
+		
+		final Spinner spinner = (Spinner) layer_view
+				.findViewById(R.id.setting_sections_sp);
+		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
+				this, R.array.sections, android.R.layout.simple_spinner_item);
+		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		spinner.setAdapter(adapter);
+		spinner.setTag(spinner.getSelectedItemPosition());
+		spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+			public void onItemSelected(AdapterView<?> parent, View view,
+					int position, long id) {
+                if((Integer)spinner.getTag()!=position){
+                	spinner.setTag(position);
+                	setting_Dialog.dismiss();
+                }
+				LBSCloudSearch.loadData(
+						2,
+						"&region="
+								+ getResources().getStringArray(
+										R.array.sections)[position]);
+				
+			}
+
+			public void onNothingSelected(AdapterView<?> parent) {
+				
+			}
+		});
+		
+		Window dialogWindow = setting_Dialog.getWindow();
+		WindowManager.LayoutParams lp = dialogWindow.getAttributes();
+		dialogWindow.setGravity(Gravity.CENTER);
+
+		dialogWindow.setAttributes(lp);
+		setting_Dialog.show();
+
+	}
+
+	/**
+	 * @Name showLayer
+	 * @Description TODO
+	 **/
+	private void showLayer() {
+		layer_Dialog = new Dialog(this, R.style.dialog);
+		View layer_view = LayoutInflater.from(this).inflate(
+				R.layout.dialog_frame_lay, null);
+
+		layer_Dialog.setCanceledOnTouchOutside(true);
+		layer_Dialog.setCancelable(true);
+		layer_Dialog.setContentView(layer_view);
+
+		ImageView frame_plain_btn = (ImageView) layer_view
+				.findViewById(R.id.frame_plain_iv);
+
+		ImageView frame_satellite_btn = (ImageView) layer_view
+				.findViewById(R.id.frame_satellite_iv);
+
+		frame_plain_btn.setOnClickListener(this);
+
+		frame_satellite_btn.setOnClickListener(this);
+
+		Window dialogWindow = layer_Dialog.getWindow();
+		WindowManager.LayoutParams lp = dialogWindow.getAttributes();
+		dialogWindow.setGravity(Gravity.CENTER);
+
+		dialogWindow.setAttributes(lp);
+		layer_Dialog.show();
+
+	}
+
+	/**
+	 * @Name showAbout
+	 * @Description TODO
+	 **/
+	private void showAbout() {
+		aboutDialog = new Dialog(this);
+		View view = LayoutInflater.from(this).inflate(
+				R.layout.dialog_about_lay, null);
+		aboutDialog.setCanceledOnTouchOutside(true);
+		aboutDialog.setCancelable(true);
+		aboutDialog.setContentView(view);
+		aboutDialog.setTitle("关于");
+
+		TextView tv_version = (TextView) view.findViewById(R.id.helper_tv);
+
+		tv_version.setText("版本号："
+				+ ApplicationInfoUtil
+						.getInstance(VMapApplication.getInstance())
+						.getVersionName());
+
+		Window dialogWindow = aboutDialog.getWindow();
+		WindowManager.LayoutParams lp = dialogWindow.getAttributes();
+		dialogWindow.setGravity(Gravity.CENTER);
+
+		// lp.x = 100; // 新位置X坐标
+		// lp.y = 100; // 新位置Y坐标
+
+		DisplayMetrics localDisplayMetrics = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(localDisplayMetrics);
+		int width = 4 * localDisplayMetrics.widthPixels / 5;
+		lp.width = width;
+		// lp.height = 400; // 高度
+		lp.alpha = 0.9f; // 透明度
+		dialogWindow.setAttributes(lp);
+		aboutDialog.show();
+	}
+
+	/**
+	 * 常用事件监听，用来处理通常的网络错误，授权验证错误等
+	 * 
+	 * @ClassName MapListener
+	 * @Description TODO
+	 * @Version 1.0
+	 * @Creation 2013-8-19 下午3:47:48
+	 * @Mender xiaoyl
+	 * @Modification 2013-8-19 下午3:47:48
+	 * 
+	 */
+	class MapListener implements MKGeneralListener {
+		@Override
+		public void onGetNetworkState(int iError) {
+			if (iError == MKEvent.ERROR_NETWORK_CONNECT) {
+				VToast.toast(context, "您的网络出错啦！");
+			} else if (iError == MKEvent.ERROR_NETWORK_DATA) {
+				VToast.toast(context, "输入正确的检索条件！");
+			}
+		}
+
+		@Override
+		public void onGetPermissionState(int iError) {
+			if (iError == MKEvent.ERROR_PERMISSION_DENIED) {
+				VToast.toast(context, "请输入正确的授权Key！");
+			}
+		}
+	}
+
+}

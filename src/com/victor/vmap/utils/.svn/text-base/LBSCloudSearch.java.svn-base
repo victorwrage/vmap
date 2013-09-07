@@ -1,0 +1,189 @@
+package com.victor.vmap.utils;
+
+import java.net.HttpURLConnection;
+import java.util.HashMap;
+
+import org.apache.http.Header;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.params.ConnRoutePNames;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.params.HttpProtocolParams;
+import org.apache.http.util.EntityUtils;
+
+import com.victor.vmap.MainActivity;
+import com.victor.vmap.VMapApplication;
+import com.yachi.library_yachi.VLog;
+import com.yachi.library_yachi.VToast;
+import com.yachi.library_yachi.utils.HttpRequest;
+
+import android.os.Handler;
+import android.os.Message;
+
+/**
+ * 百度云检索使用类
+ * 
+ * @author Lu.Jian
+ * 
+ */
+public class LBSCloudSearch {
+
+	private static String mTAG = "NetWorkManager";
+
+	// 百度云检索API URI
+	private static final String SEARCH_URI_NEARBY = "http://api.map.baidu.com/geosearch/v2/nearby?";
+	private static final String SEARCH_URI_LOCAL = "http://api.map.baidu.com/geosearch/v2/local?";
+
+	public static final int SEARCH_TYPE_NEARBY = 1;
+	public static final int SEARCH_TYPE_LOCAL = 2;
+
+	private static int currSearchType = 0;
+
+	// 云检索公钥
+	private static String ak = "81f8a6039d6819798e583732a8004b79";
+
+	private static String geotable_id = "31669";
+	/** 网络出错的Handler */
+	private static final int NET_WORK_ERROR = 1024;
+	private static int TIME_OUT = 12000;
+	private static int retry = 3;
+	private static boolean IsBusy = false;
+	private Handler handler = new Handler() {
+		/**
+		 * @Name handleMessage
+		 * @Description TODO
+		 * @param msg
+		 * @see android.os.Handler#handleMessage(android.os.Message)
+		 * @Date 2013-8-15 下午5:57:33
+		 **/
+		@Override
+		public void handleMessage(Message msg) {
+			super.handleMessage(msg);
+			switch (msg.what) {
+				case NET_WORK_ERROR :
+					VToast.toast(
+							((VMapApplication) VMapApplication.getInstance()),
+							"网络异常，请检查网络后重试！");
+					break;
+			}
+		}
+	};
+
+	/**
+	 * 加载更多数据
+	 */
+	public static void loadData(int searchType, String field) {
+
+		request(searchType, field,
+				((VMapApplication) VMapApplication.getInstance()).getHandler(),
+				VMapApplication.networkType);
+        
+	//	createTableLocation();
+	}
+
+	private static void createTableLocation() {
+		String url = "http://api.map.baidu.com/geodata/v2/geotable/create";
+		HashMap<String, String> entry = new HashMap<String, String>();
+		entry.put("name", "用户位置");
+		entry.put("geotype", "1");
+		entry.put("ak", ak);
+		VLog.v("reportLocation-" + "创建表"
+				+ HttpRequest.post(url).form(entry).code());
+
+	}
+	private static boolean detecTableLocation() {
+		String url = "http://api.map.baidu.com/geodata/v2/geotable/create";
+		HashMap<String, String> entry = new HashMap<String, String>();
+		entry.put("name", "用户位置");
+		entry.put("geotype", "1");
+		entry.put("ak", ak);
+		VLog.v("reportLocation-" + "创建表"
+				+ HttpRequest.post(url).form(entry).code());
+      return false;
+	}
+
+	/**
+	 * 云检索访问
+	 * 
+	 * @param filterParams
+	 *            访问参数，key为filter时特殊处理。
+	 * @param handler
+	 *            数据回调Handler
+	 * @param networkType
+	 *            手机联网类型
+	 * @return
+	 */
+	public static boolean request(final int searchType,
+			final String filterParams, final Handler handler,
+			final String networkType) {
+		if (IsBusy || filterParams == null)
+			return false;
+		IsBusy = true;
+
+		new Thread() {
+			public void run() {
+				int count = retry;
+				while (count > 0) {
+					try {
+
+						// 根据过滤选项拼接请求URL
+						String requestURL = "";
+
+						if (searchType == SEARCH_TYPE_NEARBY) {
+							requestURL = SEARCH_URI_NEARBY;
+						} else if (searchType == SEARCH_TYPE_LOCAL) {
+							requestURL = SEARCH_URI_LOCAL;
+						}
+
+						requestURL += "q="+filterParams.substring(0)+"&ak=" + ak + "&geotable_id="
+								+ geotable_id ;
+
+						VLog.v("request url:" + requestURL);
+
+				
+						HttpRequest request = HttpRequest.get(HttpRequest.encode(requestURL));
+						request.acceptJson();
+						
+						request.connectTimeout(TIME_OUT);
+						if (networkType.equals("cmwap")) {
+							request.useProxy("10.0.0.172", 80);
+						} else if (networkType.equals("ctwap")) {
+							request.useProxy("10.0.0.200", 80);
+						}
+						String result = request.body();
+						int status = request.code();
+						if (status == HttpURLConnection.HTTP_OK) {
+							Message msgTmp = handler
+									.obtainMessage(MainActivity.MSG_NET_SUCC);
+							msgTmp.obj = result;
+							msgTmp.sendToTarget();
+							break;
+						} else {
+							Message msgTmp = handler
+									.obtainMessage(MainActivity.MSG_NET_STATUS_ERROR);
+							msgTmp.obj = "HttpStatus error";
+							msgTmp.sendToTarget();
+						}
+					} catch (Exception e) {
+						handler.sendEmptyMessage(NET_WORK_ERROR);
+						VLog.e("网络异常，请检查网络后重试！");
+						e.printStackTrace();
+					}
+					count--;
+				}
+				if (count <= 0 && handler != null) {
+					Message msgTmp = handler
+							.obtainMessage(MainActivity.MSG_NET_TIMEOUT);
+					msgTmp.sendToTarget();
+				}
+				IsBusy = false;
+			}
+		}.start();
+		return true;
+	}
+
+}
