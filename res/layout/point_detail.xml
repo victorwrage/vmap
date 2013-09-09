@@ -39,6 +39,7 @@
         android:layout_marginLeft="10dip"
         android:textSize="16sp"
         android:textColor="@color/gray"
-        android:text="地点"/>
+        android:text="地点"
+        android:visibility="gone"/>
 
 </RelativeLayout>

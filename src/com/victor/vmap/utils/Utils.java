@@ -45,8 +45,8 @@ public class Utils {
 		try {
 			JSONArray jsonArray = json.getJSONArray("contents");
 			if (jsonArray != null && jsonArray.length() <= 0) {
-				app.getHandler().sendEmptyMessage(
-						SplashActivity.MSG_NET_TIMEOUT);
+			/*	app.getHandler().sendEmptyMessage(
+						SplashActivity.MSG_NET_TIMEOUT);*/
 			} else {
 				for (int i = 0; i < jsonArray.length(); i++) {
 					JSONObject jsonObject2 = (JSONObject) jsonArray.opt(i);
@@ -86,22 +86,8 @@ public class Utils {
 								.getLongitude(), latitude, longitude, results);
 					}
 					content.setDistance((int) results[0] + "米");
-
-					switch (Integer.parseInt(content.getGeotable_id())) {
-						case 31930 :
-							content.setBranch_type(0);
-							break;
-						case 32425 :
-							content.setBranch_type(1);
-							break;
-						case 31669 :
-							content.setBranch_type(2);
-							break;
-						case 32426 :
-							content.setBranch_type(3);
-							break;
-
-					}
+                 
+					content.setBranch_type(MapConstant.UPDATING_GEOTABLE_SEQ);
 					list.add(content);
 				}
 			}

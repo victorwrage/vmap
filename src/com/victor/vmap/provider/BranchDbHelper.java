@@ -65,12 +65,12 @@ public class BranchDbHelper {
 	 * 
 	 * @return
 	 */
-	public boolean existCardId(String  uid) {
+	synchronized public boolean existCardId(String uid) {
 		boolean result = false;
 		String where = BranchDataProvider.UID + "= '" + uid + "'";
 		Cursor cursor = contentResolver.query(
-				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, new String[] {}, where,
-				null, null);
+				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, new String[]{},
+				where, null, null);
 		if (cursor != null) {
 			result = cursor.moveToFirst();
 			cursor.close();
@@ -80,46 +80,37 @@ public class BranchDbHelper {
 		return result;
 	}
 
-
-
 	/**
 	 * 数据库插入Tag
 	 * 
 	 * @param item
 	 * @return
 	 */
-	public boolean insertBranchItem(BranchModel item) {
+	synchronized public boolean insertBranchItem(BranchModel item) {
 		boolean result = false;
 		ContentValues initValues = new ContentValues();
 		initValues.put(BranchDataProvider.UID, item.getUid());
-		initValues.put(BranchDataProvider.BRANCH_NAME,
-				item.getName());
+		initValues.put(BranchDataProvider.BRANCH_NAME, item.getName());
 		initValues.put(BranchDataProvider.GEOTABLE_ID, item.getGeotable_id());
 		initValues.put(BranchDataProvider.BRANCH_TYPE, item.getBranch_type());
-	    initValues.put(BranchDataProvider.LATITUDE, item.getLatitude());
-		
+		initValues.put(BranchDataProvider.LATITUDE, item.getLatitude());
+
 		initValues.put(BranchDataProvider.LONGITUDE, item.getLongitude());
 		initValues.put(BranchDataProvider.BRANCH_ADD, item.getAddr());
-		
 
-		initValues.put(BranchDataProvider.PROVINCE,
-				item.getProvince());
-		initValues.put(BranchDataProvider.CITY,
-				item.getCity());
-		initValues.put(BranchDataProvider.DISTRICT,
-				item.getDistrict());
-		
+		initValues.put(BranchDataProvider.PROVINCE, item.getProvince());
+		initValues.put(BranchDataProvider.CITY, item.getCity());
+		initValues.put(BranchDataProvider.DISTRICT, item.getDistrict());
 
 		initValues.put(BranchDataProvider.CREATE_TIME, item.getCreate_time());
 		initValues.put(BranchDataProvider.MODIFY_TIME, item.getModify_time());
-		
+
 		initValues.put(BranchDataProvider.IMAGE_URL, item.getImageurl());
 
-	
 		initValues.put(BranchDataProvider.WEB_URL, item.getWebUrl());
-		initValues.put(BranchDataProvider.STRING_PARAMS,"");
-		Uri uri = contentResolver.insert(BranchDataProvider.CONTENT_URI_BRANCHMANAGE,
-				initValues);
+		initValues.put(BranchDataProvider.STRING_PARAMS, "");
+		Uri uri = contentResolver.insert(
+				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, initValues);
 		if (uri != null) {
 			result = true;
 		}
@@ -133,36 +124,33 @@ public class BranchDbHelper {
 	 * @param item
 	 * @return
 	 */
-	public boolean updateBranchItem(BranchModel item) {
+	synchronized public boolean updateBranchItem(BranchModel item) {
 		boolean result = false;
-		String where = BranchDataProvider.UID+"="+item.getUid();
+		String where = BranchDataProvider.UID + "=" + item.getUid();
 		ContentValues initValues = new ContentValues();
-		
-		initValues.put(BranchDataProvider.BRANCH_NAME,
-				item.getName());
+
+		initValues.put(BranchDataProvider.BRANCH_NAME, item.getName());
 		initValues.put(BranchDataProvider.BRANCH_TYPE, item.getBranch_type());
 		initValues.put(BranchDataProvider.BRANCH_ADD, item.getAddr());
 		initValues.put(BranchDataProvider.IMAGE_URL, item.getImageurl());
 
 		initValues.put(BranchDataProvider.LATITUDE, item.getLatitude());
-		
+
 		initValues.put(BranchDataProvider.LONGITUDE, item.getLongitude());
-		initValues.put(BranchDataProvider.PROVINCE,
-				item.getProvince());
-		initValues.put(BranchDataProvider.CITY,
-				item.getCity());
+		initValues.put(BranchDataProvider.PROVINCE, item.getProvince());
+		initValues.put(BranchDataProvider.CITY, item.getCity());
 		initValues.put(BranchDataProvider.CREATE_TIME, item.getModify_time());
 		initValues.put(BranchDataProvider.MODIFY_TIME, item.getModify_time());
 		initValues.put(BranchDataProvider.WEB_URL, item.getWebUrl());
-		int c = contentResolver.update(BranchDataProvider.CONTENT_URI_BRANCHMANAGE,
-				initValues, where, null);
+		int c = contentResolver.update(
+				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, initValues, where,
+				null);
 		if (c != 0) {
 			result = true;
 		}
 		VLog.e("db updateBranch " + result);
 		return result;
 	}
-	
 
 	/**
 	 * 数据库删除Tag
@@ -170,27 +158,25 @@ public class BranchDbHelper {
 	 * @param item
 	 * @return
 	 */
-	public void deleteTagItem(BranchModel item) {
-		String where = BranchDataProvider.UID + "= '"
-				+ item.getUid()+ "'";
-		int i = contentResolver.delete(BranchDataProvider.CONTENT_URI_BRANCHMANAGE,
-				where, null);
+	synchronized public void deleteTagItem(BranchModel item) {
+		String where = BranchDataProvider.UID + "= '" + item.getUid() + "'";
+		int i = contentResolver.delete(
+				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, where, null);
 		VLog.e("db deleteBranch " + i);
 	}
-
 
 	/**
 	 * 获取BranchModel
 	 * 
 	 * @return
 	 */
-	public ArrayList<BranchModel> getBranchs() {
+	synchronized public ArrayList<BranchModel> getBranchs() {
 		ArrayList<BranchModel> items = new ArrayList<BranchModel>();
 		BranchModel item = null;
 		String orderBy = BranchDataProvider.CREATE_TIME + " desc";
 		Cursor cursor = contentResolver.query(
-				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, new String[] {}, null,
-				null, orderBy);
+				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, new String[]{},
+				null, null, orderBy);
 		if (cursor != null) {
 			if (cursor.moveToFirst()) {
 				do {
@@ -205,35 +191,26 @@ public class BranchDbHelper {
 		return items;
 	}
 
-	
-
 	/**
 	 * 获取BranchModel
 	 * 
 	 * @return
 	 */
-	public ArrayList<BranchModel> getBranchsByName(String keywords) {
-		ArrayList<BranchModel> items = new ArrayList<BranchModel>();
+	synchronized public BranchModel getBranchsByName(String uid) {
 		BranchModel item = null;
-		String where = keywords + " in ( "+   BranchDataProvider.BRANCH_NAME +","+ BranchDataProvider.BRANCH_ADD
-				+")";
-		
-		String orderBy = BranchDataProvider.CREATE_TIME + " desc";
+		String where = uid + " =  " + BranchDataProvider.UID;
+
 		Cursor cursor = contentResolver.query(
-				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, new String[] {}, where,
-				null, orderBy);
+				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, new String[]{},
+				where, null, null);
 		if (cursor != null) {
-			if (cursor.moveToFirst()) {
-				do {
-					item = builtBranchItem(cursor);
-					items.add(item);
-				} while (cursor.moveToNext());
-			}
-			cursor.close();
-			cursor = null;
+			item = builtBranchItem(cursor);
 		}
-		VLog.v("db getBranchs by Name  " + items.size());
-		return items;
+		cursor.close();
+		cursor = null;
+
+		VLog.v("db getBranchs by UID  " + item.getName());
+		return item;
 	}
 
 	/**
@@ -241,14 +218,15 @@ public class BranchDbHelper {
 	 * 
 	 * @return
 	 */
-	public ArrayList<BranchModel> getBranchsByGeotableId(String geotable_id) {
+	synchronized public ArrayList<BranchModel> getBranchsByGeotableId(
+			String geotable_id) {
 		ArrayList<BranchModel> items = new ArrayList<BranchModel>();
 		BranchModel item = null;
-		String where = BranchDataProvider.GEOTABLE_ID + "="+geotable_id;
+		String where = BranchDataProvider.GEOTABLE_ID + "=" + geotable_id;
 		String orderBy = BranchDataProvider.CREATE_TIME + " desc";
 		Cursor cursor = contentResolver.query(
-				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, new String[] {}, where,
-				null, orderBy);
+				BranchDataProvider.CONTENT_URI_BRANCHMANAGE, new String[]{},
+				where, null, orderBy);
 		if (cursor != null) {
 			if (cursor.moveToFirst()) {
 				do {
@@ -268,9 +246,10 @@ public class BranchDbHelper {
 	 * @param cursor
 	 * @return
 	 */
-	private BranchModel builtBranchItem(Cursor cursor) {
+	synchronized private BranchModel builtBranchItem(Cursor cursor) {
 		BranchModel item = new BranchModel();
-		item.setUid(cursor.getString(cursor.getColumnIndex(BranchDataProvider.UID)));
+		item.setUid(cursor.getString(cursor
+				.getColumnIndex(BranchDataProvider.UID)));
 		item.setName(cursor.getString(cursor
 				.getColumnIndex(BranchDataProvider.BRANCH_NAME)));
 		item.setAddr(cursor.getString(cursor
@@ -297,13 +276,10 @@ public class BranchDbHelper {
 				.getColumnIndex(BranchDataProvider.DISTRICT)));
 		item.setWebUrl(cursor.getString(cursor
 				.getColumnIndex(BranchDataProvider.WEB_URL)));
-		
+
 		VLog.v("builtBranchItem--" + item.getName());
 		return item;
 	}
-
-
-
 
 	/**
 	 * 清除数据库信息
@@ -311,7 +287,7 @@ public class BranchDbHelper {
 	 * @throws Exception
 	 */
 	public void reinitializationDataBaseTable() throws Exception {
-		contentResolver.delete(BranchDataProvider.CONTENT_URI_BRANCHMANAGE, null,
-				null);
+		contentResolver.delete(BranchDataProvider.CONTENT_URI_BRANCHMANAGE,
+				null, null);
 	}
 }

@@ -1,11 +1,21 @@
 package com.victor.vmap.utils;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.json.JSONObject;
+
+import com.victor.vmap.R;
 import com.victor.vmap.SplashActivity;
 import com.victor.vmap.VMapApplication;
+import com.victor.vmap.control.BranchModel;
+import com.victor.vmap.provider.BranchDbHelper;
 import com.yachi.library_yachi.VLog;
+import com.yachi.library_yachi.VToast;
 import com.yachi.library_yachi.utils.HttpRequest;
+import com.yachi.library_yachi.utils.VUtils;
+
 import android.os.Handler;
 import android.os.Message;
 
@@ -16,7 +26,6 @@ import android.os.Message;
  * 
  */
 public class LBSCloudSearch {
-
 
 	// 百度云检索API URI
 	private static final String SEARCH_URI_NEARBY = "http://api.map.baidu.com/geosearch/v2/nearby?";
@@ -29,7 +38,6 @@ public class LBSCloudSearch {
 	private static int retry = 3;
 	private static boolean IsBusy = false;
 
-
 	/**
 	 * 云检索访问
 	 * 
@@ -41,7 +49,7 @@ public class LBSCloudSearch {
 	 *            手机联网类型
 	 * @return
 	 */
-	public static  boolean request(String requestURL) {
+	public static boolean request(String requestURL) {
 		if (IsBusy)
 			return false;
 		IsBusy = true;
@@ -50,9 +58,9 @@ public class LBSCloudSearch {
 		int count = retry;
 		while (count > 0) {
 			try {
-                 if(!requestURL.startsWith("http")){
-				    requestURL = SEARCH_URI_LOCAL + requestURL;
-                 }
+				if (!requestURL.startsWith("http")) {
+					requestURL = SEARCH_URI_LOCAL + requestURL;
+				}
 				VLog.v("request url:" + requestURL);
 
 				HttpRequest request = HttpRequest.get(HttpRequest
@@ -69,35 +77,101 @@ public class LBSCloudSearch {
 				String result = request.body();
 				int status = request.code();
 				if (status == HttpURLConnection.HTTP_OK) {
-					Message msgTmp = handler
-							.obtainMessage(SplashActivity.MSG_NET_SUCC);
+
 					// msgTmp.obj = result;
 
 					JSONObject json = new JSONObject(result);
+					if (json.getString("status").equals("102")) {
+						VLog.e("LBS密钥验证错误");
+						handler.sendEmptyMessage(SplashActivity.MSG_NET_FAILED);
+						return false;
+					}
+					Message msgTmp = handler
+							.obtainMessage(SplashActivity.MSG_NET_SUCC);
 					Utils.parser(json);
-					msgTmp.sendToTarget();
-
+					updateDatabase();
+					if (MapConstant.UPDATING_GEOTABLE_SEQ>4) {
+						msgTmp.sendToTarget();
+						MapConstant.mapActivity.refreshMapView();
+					}
 					break;
 				} else {
 					Message msgTmp = handler
 							.obtainMessage(SplashActivity.MSG_NET_STATUS_ERROR);
 					msgTmp.obj = "HttpStatus error";
 					msgTmp.sendToTarget();
+
 				}
 			} catch (Exception e) {
-				handler.sendEmptyMessage(SplashActivity.MSG_NET_STATUS_ERROR);
-				VLog.e("网络异常，请检查网络后重试！");
+				if (!VUtils.isConnect(VMapApplication.getInstance()
+						.getApplicationContext())) {
+					VLog.e("网络未连接");
+				}
+				handler.sendEmptyMessage(SplashActivity.MSG_NET_FAILED);
 				e.printStackTrace();
+				return false;
+
 			}
 			count--;
 		}
 		if (count <= 0 && handler != null) {
 			Message msgTmp = handler
 					.obtainMessage(SplashActivity.MSG_NET_TIMEOUT);
-			msgTmp.sendToTarget();
+			if(MapConstant.UPDATING_GEOTABLE_SEQ>4){
+			  msgTmp.sendToTarget();
+			}
 		}
 		IsBusy = false;
 		return true;
+	}
+
+	/**
+	 * 更新/插入数据库
+	 */
+	private static void updateDatabase() {
+		BranchDbHelper db_helper = BranchDbHelper.getInstance(VMapApplication
+				.getInstance().getApplicationContext());
+		for (BranchModel item : MapConstant.getList()) {
+			if (db_helper.existCardId(item.getUid())) {
+				db_helper.updateBranchItem(item);
+			} else {
+				db_helper.insertBranchItem(item);
+			}
+		}
+
+		List<BranchModel> db_items = db_helper.getBranchs();
+		if (db_items.size() > MapConstant.getList().size()) {
+			for (BranchModel item : db_items) {
+				if (db_helper.existCardId(item.getUid())) {
+					db_helper.deleteTagItem(item);
+				}
+			}
+		}
+		MapConstant.cate_branchs = new ArrayList<ArrayList<BranchModel>>();
+		ArrayList<BranchModel> listA = db_helper
+				.getBranchsByGeotableId(MapConstant.geotable_id_pool[0]);
+		ArrayList<BranchModel> listB = db_helper
+				.getBranchsByGeotableId(MapConstant.geotable_id_pool[1]);
+		ArrayList<BranchModel> listC = db_helper
+				.getBranchsByGeotableId(MapConstant.geotable_id_pool[2]);
+		ArrayList<BranchModel> listD = db_helper
+				.getBranchsByGeotableId(MapConstant.geotable_id_pool[3]);
+		if (listA == null) {
+			listA = new ArrayList<BranchModel>();
+		}
+		if (listB == null) {
+			listB = new ArrayList<BranchModel>();
+		}
+		if (listC == null) {
+			listC = new ArrayList<BranchModel>();
+		}
+		if (listD == null) {
+			listD = new ArrayList<BranchModel>();
+		}
+		MapConstant.cate_branchs.add(listA);
+		MapConstant.cate_branchs.add(listB);
+		MapConstant.cate_branchs.add(listC);
+		MapConstant.cate_branchs.add(listD);
 	}
 
 }

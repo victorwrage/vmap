@@ -1,5 +1,10 @@
 package com.victor.vmap.provider;
 
+import java.util.HashMap;
+
+import com.yachi.library_yachi.VLog;
+
+import android.app.SearchManager;
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -8,6 +13,7 @@ import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 
 /**
@@ -23,7 +29,6 @@ public class BranchDataProvider extends ContentProvider {
 	/**网点管理表*/
 	public static final String TABLE_BRANCH_MANAGE = "branch_manage";
 
-	
 	/**id*/
 	public static final String _ID = "_id";
 	/**branch_id*/
@@ -57,15 +62,20 @@ public class BranchDataProvider extends ContentProvider {
 	/**预留*/
 	public static final String STRING_PARAMS = "string_params";
 
+	private static HashMap<String, String> searchMap; 
+
 	
 	/**
 	 * Authority for Uris
 	 * 数据库的一些数据的Provider类
 	 */
 	public static final String AUTHORITY = BranchDataProvider.class.getName();
-	/**TAG管理表*/
+	/**Branch管理表*/
 	public static final Uri CONTENT_URI_BRANCHMANAGE = Uri.parse("content://" + AUTHORITY + "/"
 			+ Schema.TABLE_BRANCH_MANAGE);  
+	/**Branch管理表*/
+	public static final Uri CONTENT_URI_BRANCHSEARCH = Uri.parse("content://" + AUTHORITY + "/"
+			+ Schema.TABLE_BRANCH_SEARCH);  
 
 	
 	/**Uri匹配器*/
@@ -73,7 +83,14 @@ public class BranchDataProvider extends ContentProvider {
 	
 	static {
 		sUriMatcher.addURI(AUTHORITY, Schema.TABLE_BRANCH_MANAGE, Schema.URI_CODE_BRANCHMANAGE);
+		sUriMatcher.addURI(AUTHORITY, Schema.TABLE_BRANCH_SEARCH, Schema.URI_CODE_BRANCHSEARCH);
 
+		searchMap = new HashMap<String, String>();
+		searchMap.put(BRANCH_NAME, BRANCH_NAME +" AS " + SearchManager.SUGGEST_COLUMN_TEXT_1); 
+		searchMap.put(_ID, _ID);  
+		searchMap.put(UID,UID + " AS " + SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID); 
+		searchMap.put(BRANCH_ADD,BRANCH_ADD + " AS " + SearchManager.SUGGEST_COLUMN_TEXT_2); 
+		
 	}
 	/** 内部类*/
 	private TagDBHelp dbHelp;
@@ -91,9 +108,17 @@ public class BranchDataProvider extends ContentProvider {
 	}
 
 	@Override
-	public String getType(Uri arg0) {
+	public String getType(Uri uri) {
 		
-		return null;
+		switch (sUriMatcher.match(uri)) {
+		         case Schema.URI_CODE_BRANCHMANAGE:
+		             return Schema.TABLE_BRANCH_MANAGE;
+		         case Schema.URI_CODE_BRANCHSEARCH:
+		             return Schema.TABLE_BRANCH_SEARCH;
+		         default:
+		            throw new IllegalArgumentException("Unknown URI " + uri);
+		        }
+
 	}
 
 	@Override
@@ -126,14 +151,41 @@ public class BranchDataProvider extends ContentProvider {
 		String tblName = null;
 		String groupBy = null;
 		String limit = null;
+		
+		String query = uri.getLastPathSegment(); 
+		if (SearchManager.SUGGEST_URI_PATH_QUERY.equals(query)) { 
+		//如果找到符合用户输入的记录 
+			SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
+			
+			builder.setTables(Schema.TABLE_BRANCH_MANAGE);
+		//	projectionMap.put(COL_DATE, COL_DATE); 
+		//	String where = BranchDataProvider.GEOTABLE_ID + "=" + "31669";
+			builder.setProjectionMap(searchMap); 
+			if (selectionArgs!= null && selectionArgs.length > 0 &&selectionArgs[0].length() > 0) { 
+				VLog.v("qqqqqqqqqqqqqqqq--string--"+selectionArgs[0]);
+				/*builder.appendWhere(selectionArgs[0] + " in ( "+   BranchDataProvider.BRANCH_NAME +","+ BranchDataProvider.BRANCH_ADD
+						+")");*/
+			//	builder.appendWhere(BranchDataProvider.BRANCH_NAME + " LIKE %" + selectionArgs[0]+"%");
+			}else{
+
+				VLog.v("qqqqqqqqqqqqqqqq--string--"+query);
+			}
+			
+	//	    builder.appendWhere(BranchDataProvider.BRANCH_NAME + " LIKE %" + query+"%");
+			Cursor search_cursor = builder.query(db, null, null, null, groupBy, null, sortOrder);
+			VLog.v("qqqqqqqqqqqqqqqq--count--"+search_cursor.getCount());
+			return search_cursor;
+		} 
+		
 		switch (sUriMatcher.match(uri)) {
 		case Schema.URI_CODE_BRANCHMANAGE:
 			tblName = Schema.TABLE_BRANCH_MANAGE;
 			break;
-	
 		}
+		
 		if (tblName != null) {
-			return db.query(tblName, projection, selection, selectionArgs, groupBy, null, sortOrder, limit);
+			Cursor cursor = db.query(tblName, projection, selection, selectionArgs, groupBy, null, sortOrder, limit);
+			return cursor;
 		}
 		return null;
 	}
@@ -232,9 +284,7 @@ public class BranchDataProvider extends ContentProvider {
 		@Override
 		public void onUpgrade(SQLiteDatabase db, int arg1, int arg2) {
 			db.execSQL(DELETE_TABLE_BRANCH_MANAGE);
-
 			db.execSQL(CREATE_TABLE_BRANCH_MANAGE);
-
 		}
 	}
 	
@@ -244,9 +294,13 @@ public class BranchDataProvider extends ContentProvider {
 	public static final class Schema{
 		/**BRANCH管理表 */
 		static final String TABLE_BRANCH_MANAGE = "branch_manage";
+		/**BRANCH管理表 */
+		static final String TABLE_BRANCH_SEARCH = "search_suggest_query/#";
 
 		/** Codes for UriMatcher 对应BRANCH管理表 */
 		static final int URI_CODE_BRANCHMANAGE = 1;
+		/** Codes for UriMatcher 对应BRANCH管理表 */
+		static final int URI_CODE_BRANCHSEARCH = 2;
 
 	}
 }

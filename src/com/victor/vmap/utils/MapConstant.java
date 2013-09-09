@@ -34,10 +34,20 @@ public class MapConstant {
 	private static List<BranchRequestModel> request_list = new ArrayList<BranchRequestModel>();
 	/**正在更新的Geotable_id*/
 	public static  int UPDATING_GEOTABLE_SEQ = 0;
-	/**地图key*/
-	public static final String strKey = "FE95801d772e14d0b5ec69cb125ba77c";
+	
+	/***/
+	public static  String[] geotable_id_pool;
+	
+	/**移动端 key*/
+	public static final String CLIENT_AK = "FE95801d772e14d0b5ec69cb125ba77c";
+	//public static final String mapKey = "81f8a6039d6819798e583732a8004b79";
+	/**服务端key*/
+	public static final String SERVER_AK =  "81f8a6039d6819798e583732a8004b79";
+	//public static final String strKey = "FE95801d772e14d0b5ec69cb125ba77c";
 	/**微信APP key*/
-	public static final String wxKey = "wx6e3d98ab86eb8acd";
+	public static final String WX_KEY = "wx6e3d98ab86eb8acd";
+	/**请求区域*/
+	public static final String REGION_REQUEST= "长沙市";
 	/** 分享标题*/
 	public static final String socialShareTitle = "雅驰电子湘行一卡通";
 	/** 微信分享标题*/
@@ -50,8 +60,8 @@ public class MapConstant {
 	public static  ArrayList<ArrayList<BranchModel>> cate_branchs;
 	// 定位结果
 	private static BDLocation currlocation = null;
+	public static boolean IsEntered = false;
 
-	
 	/**
 	 * @return the request_list
 	 **/

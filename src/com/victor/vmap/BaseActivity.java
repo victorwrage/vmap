@@ -5,7 +5,7 @@
  * @Author xiaoyl
  * @Creation 2013-9-7 下午3:33:16   
  * @Copyright Copyright © 2009 - 2013 Victor.All Rights Reserved.
-**/
+ **/
 package com.victor.vmap;
 
 import java.util.ArrayList;
@@ -46,15 +46,15 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 
-/** 
- * @ClassName BaseActivity 
- * @Description TODO 
+/**
+ * @ClassName BaseActivity
+ * @Description TODO 地图界面基类，用于处理一些程序初始化
  * @Version 1.0
- * @Creation 2013-9-7 下午3:33:16 
+ * @Creation 2013-9-7 下午3:33:16
  * @Mender xiaoyl
- * @Modification 2013-9-7 下午3:33:16 
+ * @Modification 2013-9-7 下午3:33:16
  **/
-public class BaseActivity extends Activity  implements OnClickListener {
+public class BaseActivity extends Activity implements OnClickListener {
 	protected BMapManager mBMapManager = null;
 	protected MapView mMapView = null;
 	protected VMapApplication app;
@@ -62,9 +62,7 @@ public class BaseActivity extends Activity  implements OnClickListener {
 	protected Dialog loading;
 	protected UMSocialService controller;
 	protected BranchDbHelper db_helper;
-	/** 所有Geotable ID*/
-	protected String[] geotable_ids;
-	
+
 	/** 显示底部工具栏 */
 	private static final int SHOW_BOTTOM = 1000;
 	private Timer timer;
@@ -78,11 +76,11 @@ public class BaseActivity extends Activity  implements OnClickListener {
 		 **/
 		@Override
 		public void handleMessage(Message msg) {
-			
+
 			super.handleMessage(msg);
 			switch (msg.what) {
 				case SHOW_BOTTOM :
-					showBottom();
+					// showBottom();
 					timer.cancel();
 					break;
 			}
@@ -95,36 +93,27 @@ public class BaseActivity extends Activity  implements OnClickListener {
 			handler.sendMessage(message);
 		}
 	};
-	
-	/** 
+
+	/**
 	 * @Name onCreate
-	 * @Description TODO 
+	 * @Description TODO
 	 * @param savedInstanceState
 	 * @see android.app.Activity#onCreate(android.os.Bundle)
 	 * @Date 2013-9-7 下午3:35:34
-	**/
+	 **/
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		context = this;
-		VLog.setDEBUG(true);
-		db_helper = BranchDbHelper.getInstance(context);
-		app = (VMapApplication) VMapApplication.getInstance();
-		app.addActivitys(this);
-
-		UmengUpdateAgent.update(this);// 加入更新
-		UmengUpdateAgent.setUpdateOnlyWifi(false);//设置非WIFI可以更新
-		MobclickAgent.onError(this);// 加入出错报告
-		geotable_ids = getResources().getStringArray(R.array.geotable_ids);
-		initEngineManager(this);
-	}
-	
-	/** 
-	 * @Name showBottom 
-	 * @Description TODO  显示底部布局
-	**/
-	protected  void showBottom() {
 		
+
+	}
+
+	/**
+	 * @Name showBottom
+	 * @Description TODO 显示底部布局
+	 **/
+	protected void showBottom() {
+
 	}
 
 	/**
@@ -139,44 +128,12 @@ public class BaseActivity extends Activity  implements OnClickListener {
 		if (mBMapManager == null) {
 			mBMapManager = new BMapManager(context);
 		}
-		if (!mBMapManager.init(MapConstant.strKey, new MapListener())) {
+		if (!mBMapManager.init(MapConstant.CLIENT_AK, new MapListener())) {
 			// VToast.toast(context, "mBMapManager  初始化错误!");
 			VLog.e("mBMapManager  初始化错误!");
 		}
 	}
-	
-	@Override
-	public void onPause() {
-		mMapView.onPause();
-		if (mBMapManager != null) {
-			mBMapManager.stop();
-		}
-		mMapView.setKeepScreenOn(false);
-		super.onPause();
-		MobclickAgent.onPause(this);
-	}
 
-	@Override
-	public void onResume() {
-		mMapView.onResume();
-		if (mBMapManager != null) {
-			mBMapManager.start();
-		}
-		mMapView.setKeepScreenOn(true);
-		super.onResume();
-		MobclickAgent.onResume(this);
-	}
-
-	@Override
-	public void onDestroy() {
-		mMapView.destroy();
-		if (mBMapManager != null) {
-			mBMapManager.destroy();
-			mBMapManager = null;
-		}
-		super.onDestroy();
-	}
-	
 	/*
 	 * 添加对back按钮的处理，点击提示退出 (non-Javadoc)
 	 * 
@@ -186,16 +143,16 @@ public class BaseActivity extends Activity  implements OnClickListener {
 	public boolean dispatchKeyEvent(KeyEvent event) {
 		if (event.getKeyCode() == KeyEvent.KEYCODE_BACK
 				&& event.getAction() != 1) {
-			exit();
+			showDialogExit();
 			return true;
 		}
 		return super.dispatchKeyEvent(event);
 	}
-	
+
 	/*
 	 * 退出应用程序
 	 */
-	private void exit() {
+	private void showDialogExit() {
 		new AlertDialog.Builder(BaseActivity.this)
 				.setMessage(R.string.msg_exit)
 				.setIcon(R.drawable.icon)
@@ -207,7 +164,7 @@ public class BaseActivity extends Activity  implements OnClickListener {
 							}
 						}).setNegativeButton(R.string.msg_cancel, null).show();
 	}
-	
+
 	/*
 	 * 显示警告
 	 */
@@ -234,7 +191,7 @@ public class BaseActivity extends Activity  implements OnClickListener {
 		controller.setShareContent(MapConstant.socialShareTitle);// 设置分享文字内容
 		controller.setShareMedia(new UMImage(BaseActivity.this, arg0));//
 		// 设置分享图片内容
-		UMWXHandler.WX_APPID = MapConstant.wxKey;// 设置微信的Appid
+		UMWXHandler.WX_APPID = MapConstant.WX_KEY;// 设置微信的Appid
 
 		// 添加微信平台
 		controller.getConfig().supportWXPlatform(BaseActivity.this);
@@ -244,16 +201,15 @@ public class BaseActivity extends Activity  implements OnClickListener {
 				BaseActivity.this,
 				UMServiceFactory.getUMWXHandler(BaseActivity.this).setToCircle(
 						true));
-	
-		UMWXHandler.CONTENT_URL =MapConstant.wxContentShareUrl;// 微信图文分享必须设置一个url
-													// 默认"http://www.umeng.com"
+
+		UMWXHandler.CONTENT_URL = MapConstant.wxContentShareUrl;// 微信图文分享必须设置一个url
+		// 默认"http://www.umeng.com"
 		UMWXHandler.WX_CONTENT_TITLE = MapConstant.wxShareTitle;
 		UMWXHandler.WXCIRCLE_CONTENT_TITLE = MapConstant.wxContentShareTitle;
 		controller.openShare(BaseActivity.this, false);
 
 	}
 
-	
 	/**
 	 * 常用事件监听，用来处理通常的网络错误，授权验证错误等
 	 * 
@@ -269,7 +225,7 @@ public class BaseActivity extends Activity  implements OnClickListener {
 		@Override
 		public void onGetNetworkState(int iError) {
 			if (iError == MKEvent.ERROR_NETWORK_CONNECT) {
-				VToast.toast(context,R.string.tip_net_error);
+				VToast.toast(context, R.string.tip_net_error);
 			} else if (iError == MKEvent.ERROR_NETWORK_DATA) {
 				VToast.toast(context, R.string.tip_data_error);
 			}
@@ -282,12 +238,10 @@ public class BaseActivity extends Activity  implements OnClickListener {
 			}
 		}
 	}
-	
+
 	/**
-	 * 截图回调
-	 * 
 	 * @ClassName MapShotCut
-	 * @Description TODO
+	 * @Description TODO 截图回调
 	 * @Version 1.0
 	 * @Creation 2013-9-3 上午10:10:20
 	 * @Mender xiaoyl
@@ -295,7 +249,6 @@ public class BaseActivity extends Activity  implements OnClickListener {
 	 * 
 	 */
 	class MapShotCutListener implements MKMapViewListener {
-
 		/**
 		 * @Name onClickMapPoi
 		 * @Description TODO
@@ -305,7 +258,6 @@ public class BaseActivity extends Activity  implements OnClickListener {
 		 **/
 		@Override
 		public void onClickMapPoi(MapPoi arg0) {
-			
 
 		}
 
@@ -318,7 +270,7 @@ public class BaseActivity extends Activity  implements OnClickListener {
 		 **/
 		@Override
 		public void onGetCurrentMap(Bitmap arg0) {
-			if(!loading.isShowing()){
+			if (!loading.isShowing()) {
 				return;
 			}
 			initSocialShare(arg0);
@@ -333,7 +285,6 @@ public class BaseActivity extends Activity  implements OnClickListener {
 		 **/
 		@Override
 		public void onMapAnimationFinish() {
-			
 
 		}
 
@@ -374,8 +325,9 @@ public class BaseActivity extends Activity  implements OnClickListener {
 		int cLat = 28148494;
 		int cLon = 113002065;
 		if (MapConstant.getCurrlocation() == null) {
-			mMapView.getController().setCenter(new GeoPoint(cLat, cLon));
-		} else if (MapConstant.cate_branchs != null && MapConstant.cate_branchs.size() >= 1) {
+			mMapView.getController().animateTo(new GeoPoint(cLat, cLon));
+		} else if (MapConstant.cate_branchs != null
+				&& MapConstant.cate_branchs.size() >= 1) {
 			for (ArrayList<BranchModel> items : MapConstant.cate_branchs) {
 				if (items.size() > 0) {
 					BranchModel c = (BranchModel) items.get(0);
@@ -388,16 +340,16 @@ public class BaseActivity extends Activity  implements OnClickListener {
 			}
 		}
 	}
-	
-	/** 
+
+	/**
 	 * @Name onClick
-	 * @Description TODO 
+	 * @Description TODO
 	 * @param v
 	 * @see android.view.View.OnClickListener#onClick(android.view.View)
 	 * @Date 2013-9-7 下午3:45:28
-	**/
+	 **/
 	@Override
 	public void onClick(View v) {
-		
+
 	}
 }

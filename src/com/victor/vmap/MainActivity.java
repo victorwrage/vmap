@@ -1,7 +1,6 @@
 package com.victor.vmap;
 
 import com.baidu.mapapi.map.ItemizedOverlay;
-
 import com.baidu.mapapi.map.MKOLUpdateElement;
 import com.baidu.mapapi.map.MKOfflineMap;
 import com.baidu.mapapi.map.MKOfflineMapListener;
@@ -11,14 +10,16 @@ import com.baidu.mapapi.map.OverlayItem;
 import com.baidu.mapapi.map.PopupClickListener;
 import com.baidu.mapapi.map.PopupOverlay;
 import com.baidu.platform.comapi.basestruct.GeoPoint;
+import com.umeng.analytics.MobclickAgent;
 import com.umeng.socialize.controller.UMSsoHandler;
+import com.umeng.update.UmengUpdateAgent;
 import com.victor.vmap.control.BranchModel;
+import com.victor.vmap.provider.BranchDbHelper;
 import com.victor.vmap.utils.MapConstant;
-import com.victor.vmap.utils.SearchUtils;
-import com.victor.vmap.utils.SearchUtils.Word;
 import com.yachi.library_yachi.VLog;
 import com.yachi.library_yachi.VToast;
 import com.yachi.library_yachi.utils.ApplicationInfoUtil;
+import com.yachi.library_yachi.utils.VUtils;
 
 import android.app.Dialog;
 import android.content.DialogInterface;
@@ -49,69 +50,107 @@ import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-public class MainActivity extends BaseActivity{
-	
+/**
+ * 地图界面
+ * 
+ * @author xiaoyl
+ * 
+ */
+public class MainActivity extends BaseActivity {
+
 	/** 关于、视图、设置 对话框 */
 	private Dialog aboutDialog, layer_Dialog, setting_Dialog;
 	/** 描点标记、定位标记 */
 	private OverlayTest ov_markA, ov_markB, ov_markC, ov_markD, ovt_location;
 	private PopupOverlay pop;
-	/** 搜索按钮*/
-	private Button btnsearch;
-	/** 搜索文本框*/
-	private EditText etdata;
-	/** 底部布局的高度（用于显示Geotable参考）*/
-	private  int bottom_height;
+	/** 底部布局的高度（用于显示Geotable参考） */
+	private int width, height, bottom_height;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		VLog.v("MainActivity----onCreate");
+		context = this;
+		VLog.setDEBUG(true);
+		db_helper = BranchDbHelper.getInstance(context);
+		app = (VMapApplication) VMapApplication.getInstance();
+		app.addActivitys(this);
+
+		UmengUpdateAgent.update(this);// 加入更新
+		UmengUpdateAgent.setUpdateOnlyWifi(false);// 设置非WIFI可以更新
+		MobclickAgent.onError(this);// 加入出错报告	
+		initEngineManager(this);
+		
 		MapConstant.mapActivity = this;
 		setContentView(R.layout.activity_main);
 		resolveIntent(getIntent());
 
 		initView();
 		initOffLineMap();
+		MapConstant.IsEntered = true;
 	}
 
+	@Override
+	public void onPause() {
+		mMapView.onPause();
+		if (mBMapManager != null) {
+			mBMapManager.stop();
+		}
+		super.onPause();
+		MobclickAgent.onPause(this);
+		removeAllMarker();
+	}
+
+	@Override
+	public void onResume() {
+		mMapView.onResume();
+		if (mBMapManager != null) {
+			mBMapManager.start();
+		}
+		super.onResume();
+		MobclickAgent.onResume(this);
+		addAllMarker();
+	}
+
+	@Override
+	public void onDestroy() {
+		mMapView.destroy();
+		if (mBMapManager != null) {
+			mBMapManager.destroy();
+			mBMapManager = null;
+		}
+		super.onDestroy();
+	}
 
 	/**
+	 * @Name refreshMapView 
+	 * @Description TODO  刷新地图
+	*
+	 */
+	public void refreshMapView(){
+		removeAllMarker();
+		addAllMarker();
+	}
+	
+	/**
 	 * @Name resolveIntent
-	 * @Description TODO
+	 * @Description TODO 响应搜索点击
 	 * @param intent
 	 **/
 	private void resolveIntent(Intent intent) {
 		VLog.v("resolveIntent--" + intent.getAction());
 		if (Intent.ACTION_VIEW.equals(intent.getAction())) {
-			SearchUtils.Word theWord = SearchUtils.getInstance()
-					.getMatches(intent.getDataString().trim().toLowerCase())
-					.get(0);
-			launchWord(theWord);
-			finish();
-		} else {
-			Button button = (Button) findViewById(R.id.btncall);
-			button.setOnClickListener(new OnClickListener() {
-
-				@Override
-				public void onClick(View v) {
-					VLog.v("resolveIntent---click");
-					onSearchRequested();
-
-				}
-			});
+			String uid = intent.getDataString().trim().toLowerCase();
+			BranchModel bm = db_helper.getBranchsByName(uid);
+			if (bm != null) {
+				GeoPoint point = new GeoPoint(
+						Integer.parseInt(bm.getLatitude()), Integer.parseInt(bm
+								.getLongitude()));
+				mMapView.getController().animateTo(point);
+				showDetail(bm.getName(), point);
+			}
 		}
 	}
-
-	
-	/**
-	 * @Name launchWord
-	 * @Description TODO
-	 * @param theWord
-	 **/
-	private void launchWord(Word theWord) {
-
-	}
-
-	
 
 	/**
 	 * @Name initOffLineMap
@@ -153,21 +192,52 @@ public class MainActivity extends BaseActivity{
 	private void initView() {
 		VLog.v("MainActivity--initView");
 		mMapView = (MapView) findViewById(R.id.bmapsView);
-		ImageView location_iv = (ImageView) findViewById(R.id.main_focus_iv);
-		location_iv.setOnClickListener(this);
+		ImageView view_iv = (ImageView) findViewById(R.id.main_frame_iv);
+		EditText search_et = (EditText) findViewById(R.id.main_search_iv);
+		ImageView focus_iv = (ImageView) findViewById(R.id.main_focus_iv);
+
+		view_iv.setOnClickListener(this);
+		search_et.setOnClickListener(this);
+		focus_iv.setOnClickListener(this);
+		RadioGroup geo_rg = (RadioGroup) findViewById(R.id.bottom_geo_rg);
+
+		geo_rg.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(RadioGroup group, int checkedId) {
+
+				switch (checkedId) {
+					case R.id.bottom_geo_all :
+						removeAllMarker();
+						addAllMarker();
+						break;
+					case R.id.bottom_geo_a :
+						removeAllMarker();
+						addMarker(0);
+						break;
+					case R.id.bottom_geo_b :
+						removeAllMarker();
+						addMarker(1);
+						break;
+					case R.id.bottom_geo_c :
+						removeAllMarker();
+						addMarker(2);
+						break;
+					case R.id.bottom_geo_d :
+						removeAllMarker();
+						addMarker(3);
+						break;
+				}
+			}
+		});
 		mMapView.setBuiltInZoomControls(true);
 		mMapView.regMapViewListener(mBMapManager, new MapShotCutListener());
 		MapController mMapController = mMapView.getController();
 		mMapController.setZoom(12);
-		ImageView setting = (ImageView) findViewById(R.id.main_setting_iv);
-		setting.setOnClickListener(this);
 
-		etdata = (EditText) findViewById(R.id.etdata);
-		btnsearch = (Button) findViewById(R.id.btncall);
-		btnsearch.setOnClickListener(this);
-
+		width = VUtils.getPhoneResolution(context)[0];
+		bottom_height = height = (int) (VUtils.getPhoneResolution(context)[1] * 0.2);
 	}
-	
+
 	/**
 	 * 删除所有标记
 	 */
@@ -179,6 +249,7 @@ public class MainActivity extends BaseActivity{
 		mMapView.getOverlays().remove(ov_markD);
 		mMapView.refresh();
 	}
+
 	/**
 	 * 添加所有标记
 	 */
@@ -188,6 +259,7 @@ public class MainActivity extends BaseActivity{
 		addMarker(1);
 		addMarker(2);
 		addMarker(3);
+
 	}
 
 	/**
@@ -195,7 +267,7 @@ public class MainActivity extends BaseActivity{
 	 * @Description TODO
 	 **/
 	private void addMarker(int index) {
-		VLog.v("MainActivity--addMarker-"+index);
+		VLog.v("MainActivity--addMarker-" + index);
 		OverlayTest ov_mark = ov_markA;
 		int marker_res = R.drawable.icon_gcoding;
 		switch (index) {
@@ -212,7 +284,8 @@ public class MainActivity extends BaseActivity{
 				marker_res = R.drawable.icon_share_loc_add;
 				break;
 		}
-		if (MapConstant.cate_branchs != null && MapConstant.cate_branchs.size() != 0) {
+		if (MapConstant.cate_branchs != null
+				&& MapConstant.cate_branchs.size() != 0) {
 
 			ov_mark = new OverlayTest(null, mMapView, false);
 
@@ -284,10 +357,12 @@ public class MainActivity extends BaseActivity{
 	class OverlayTest extends ItemizedOverlay<OverlayItem> {
 		// 用MapView构造ItemizedOverlay
 		boolean isLoc = false;
+
 		public OverlayTest(Drawable mark, MapView mapView, boolean isLoc) {
 			super(mark, mapView);
 			this.isLoc = isLoc;
 		}
+
 		protected boolean onTap(int index) {
 			mMapView.getController().animateTo(getItem(index).getPoint());
 			showDetail(getItem(index).getTitle(), getItem(index).getPoint());
@@ -301,6 +376,7 @@ public class MainActivity extends BaseActivity{
 
 			return true;
 		}
+
 		public boolean onTap(GeoPoint pt, MapView mapView) {
 			// 在此处理MapView的点击事件，当返回 true时
 			if (pop != null) {
@@ -310,6 +386,7 @@ public class MainActivity extends BaseActivity{
 			return false;
 		}
 	}
+
 	/**
 	 * 弹出该点窗口
 	 * 
@@ -320,39 +397,31 @@ public class MainActivity extends BaseActivity{
 	protected void showBottom() {
 		VLog.v("MainActivity--showBottom");
 		final View v = View.inflate(context, R.layout.bottom_menu, null);
-        LinearLayout geo = (LinearLayout) v.findViewById(R.id.bottom_geo_lay);
-        LinearLayout share = (LinearLayout) v.findViewById(R.id.bottom_share_lay);
-        LinearLayout about = (LinearLayout) v.findViewById(R.id.bottom_about_lay);
-        geo.setOnClickListener(this);
-        share.setOnClickListener(this);
-        about.setOnClickListener(this);
+		LinearLayout geo = (LinearLayout) v.findViewById(R.id.bottom_geo_lay);
+		LinearLayout share = (LinearLayout) v
+				.findViewById(R.id.bottom_share_lay);
+		LinearLayout about = (LinearLayout) v
+				.findViewById(R.id.bottom_about_lay);
+		geo.setOnClickListener(this);
+		share.setOnClickListener(this);
+		about.setOnClickListener(this);
 
-        ViewTreeObserver vto2 = v.getViewTreeObserver();   
-        vto2.addOnGlobalLayoutListener(new OnGlobalLayoutListener() { 
-            @Override   
-            public void onGlobalLayout() { 
-            	int width = 0;
-                int height = 0;
-                v.getViewTreeObserver().removeGlobalOnLayoutListener(this);   
-                width = v.getWidth();
-                bottom_height=  height = v.getHeight();
-                PopupWindow window = new PopupWindow(v,  width,  height);
-        		window.setOutsideTouchable(true);
-             
-        		// 设置整个popupwindow的样式。
-        		window.setBackgroundDrawable(getResources().getDrawable(
-        				R.drawable.map_layer_background));
-        		// 使窗口里面的空间显示其相应的效果，比较点击button时背景颜色改变。
-        		// 如果为false点击相关的空间表面上没有反应，但事件是可以监听到的。
-        		// listview的话就没有了作用。
-        		window.setAnimationStyle(R.style.SlideBottomAnimationLong);
-        		window.setFocusable(true);
-        		window.update();
-        		window.showAtLocation(mMapView, Gravity.CENTER_HORIZONTAL
-        				| Gravity.BOTTOM, 0, 0);
-            }   
-        });   
+		VLog.v("showBottom---" + width);
+		VLog.v("showBottom---" + height);
+		PopupWindow window = new PopupWindow(v, width, height);
+		window.setOutsideTouchable(true);
 
+		// 设置整个popupwindow的样式。
+		window.setBackgroundDrawable(getResources().getDrawable(
+				R.drawable.map_layer_background));
+		// 使窗口里面的空间显示其相应的效果，比较点击button时背景颜色改变。
+		// 如果为false点击相关的空间表面上没有反应，但事件是可以监听到的。
+		// listview的话就没有了作用。
+		window.setAnimationStyle(R.style.SlideBottomAnimationLong);
+		window.setFocusable(true);
+		window.update();
+		window.showAtLocation(mMapView, Gravity.CENTER_HORIZONTAL
+				| Gravity.BOTTOM, 0, 0);
 
 	}
 
@@ -368,13 +437,17 @@ public class MainActivity extends BaseActivity{
 		View v = View.inflate(context, R.layout.point_detail, null);
 
 		Button btn_left = (Button) v.findViewById(R.id.point_left_btn);
+		Button btn_right = (Button) v.findViewById(R.id.point_right_btn);
 		btn_left.setOnClickListener(this);
+		btn_right.setOnClickListener(this);
 		TextView tv_title = (TextView) v.findViewById(R.id.point_detail_tv);
 		TextView tv_add = (TextView) v.findViewById(R.id.point_add_tv);
+		if (title == null)
+			title = "未填写";
 		tv_title.setText(title);
-		tv_add.setText(point.getLatitudeE6()+":"+point.getLongitudeE6());
-		
-		PopupWindow window = new PopupWindow(v, v.getWidth(), v.getHeight());
+		tv_add.setText(point.getLatitudeE6() + ":" + point.getLongitudeE6());
+
+		PopupWindow window = new PopupWindow(v, width, height);
 
 		// 设置整个popupwindow的样式。
 		window.setBackgroundDrawable(getResources().getDrawable(
@@ -389,6 +462,7 @@ public class MainActivity extends BaseActivity{
 				| Gravity.BOTTOM, 0, 0);
 
 	}
+
 	/**
 	 * @Name onClick
 	 * @Description TODO
@@ -408,47 +482,42 @@ public class MainActivity extends BaseActivity{
 				mMapView.setSatellite(true);
 				layer_Dialog.dismiss();
 				break;
-			case R.id.main_focus_iv :
-				int lat = (int) (MapConstant.getCurrlocation().getLatitude() * 1000000);
-				int lon = (int) (MapConstant.getCurrlocation().getLongitude() * 1000000);
-				VLog.v("focusLocation-" + lat + "," + lon);
-				mMapView.getController().animateTo(new GeoPoint(lat, lon));
-				break;
-			case R.id.main_setting_iv :
-				showSetting();
-				break;
-			case R.id.setting_frame_btn :
+			case R.id.main_frame_iv :
 				showLayer();
-				setting_Dialog.dismiss();
+				break;
+			case R.id.main_focus_iv :
+				focusLocation();
 				break;
 			case R.id.setting_about_btn :
 				setting_Dialog.dismiss();
 				showAbout();
 				break;
+			case R.id.bottom_geo_lay :// 选择网点
+				showGeotableSel();
+				break;
 			case R.id.point_left_btn :// 分享
 				mMapView.getCurrentMap();
 				showLoading();
 				break;
-			case R.id.bottom_geo_lay :// 选择网点
-				showGeotableSel();
+			case R.id.point_right_btn :// 关于
+				showAbout();
 				break;
-				
-			case R.id.btncall :// 搜索
-
+			case R.id.main_search_iv :// 搜索
+				onSearchRequested();
 				break;
 		}
 	}
 
-	/** 
-	 * @Name showGeotableSel 
-	 * @Description TODO  
-	**/
+	/**
+	 * @Name showGeotableSel
+	 * @Description TODO
+	 **/
 	private void showGeotableSel() {
 		VLog.v("MainActivity--showGeotableSel");
 		final View v = View.inflate(context, R.layout.bottom_geo, null);
 		RadioGroup geo_rg = (RadioGroup) v.findViewById(R.id.bottom_geo_rg);
 		geo_rg.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-			
+
 			@Override
 			public void onCheckedChanged(RadioGroup group, int checkedId) {
 				switch (checkedId) {
@@ -473,38 +542,20 @@ public class MainActivity extends BaseActivity{
 						addMarker(3);
 						break;
 				}
-				
+
 			}
 		});
 
-		ViewTreeObserver vto2 = v.getViewTreeObserver();   
-        vto2.addOnGlobalLayoutListener(new OnGlobalLayoutListener() { 
-            @Override   
-            public void onGlobalLayout() { 
-            	int width = 0;
-                int height = 0;
-                v.getViewTreeObserver().removeGlobalOnLayoutListener(this);   
-                width = v.getWidth();
-                bottom_height=  height = v.getHeight();
-                PopupWindow window = new PopupWindow(v,  width,  height);
-        		window.setOutsideTouchable(true);
-             
-        		// 设置整个popupwindow的样式。
-        		window.setBackgroundDrawable(getResources().getDrawable(
-        				R.drawable.map_layer_background));
-        		// 使窗口里面的空间显示其相应的效果，比较点击button时背景颜色改变。
-        		// 如果为false点击相关的空间表面上没有反应，但事件是可以监听到的。
-        		// listview的话就没有了作用。
-        		window.setAnimationStyle(R.style.SlideBottomAnimationLong);
-        		window.setFocusable(true);
-        		window.update();
-        		window.showAtLocation(mMapView, Gravity.CENTER_HORIZONTAL
-        				| Gravity.BOTTOM, 0, bottom_height);
-            }   
-        });   
-
+		PopupWindow window = new PopupWindow(v, width, height);
+		window.setOutsideTouchable(true);
+		window.setBackgroundDrawable(getResources().getDrawable(
+				R.drawable.map_layer_background));
+		window.setAnimationStyle(R.style.SlideBottomAnimationLong);
+		window.setFocusable(true);
+		window.update();
+		window.showAtLocation(mMapView, Gravity.CENTER_HORIZONTAL
+				| Gravity.BOTTOM, 0, bottom_height);
 	}
-
 
 	/**
 	 * @Name showLoading
@@ -521,7 +572,7 @@ public class MainActivity extends BaseActivity{
 		loading.setOnDismissListener(new OnDismissListener() {
 			@Override
 			public void onDismiss(DialogInterface arg0) {
-                       
+
 			}
 		});
 		loading.show();
@@ -578,7 +629,6 @@ public class MainActivity extends BaseActivity{
 					spinner.setTag(position);
 					setting_Dialog.dismiss();
 				}
-				
 
 			}
 

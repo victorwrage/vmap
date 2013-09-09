@@ -21,7 +21,7 @@
     <string name="geo_a">A类网点</string>
     <string name="geo_b">B类网点</string>
     <string name="geo_c">C类网点</string>
-    <string name="geo_d">D类网点</string>
+    <string name="geo_d">自有网点</string>
     
     <string name="search_label">搜销售点</string>
     <string name="search_hint">请输入关键字</string>
@@ -34,7 +34,7 @@
     
     
     
-    <string name="tip_update_date_first">请稍等，正在进行首次数据获取...</string>
+    <string name="tip_update_date_first">请稍等，正在进行首次数据获取</string>
     <string name="tip_update_net_error">网络未连接，将不能更新网点信息!</string>
     <string name="tip_net_error">您的网络出错啦！</string>
     <string name="tip_data_error">输入正确的检索条件！</string>

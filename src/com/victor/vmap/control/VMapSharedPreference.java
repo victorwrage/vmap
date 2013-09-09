@@ -19,10 +19,8 @@ public class VMapSharedPreference {
 	private static VMapSharedPreference instance;
 	
 	private Context context;
-	/** KEY 保存最大任务数*/
-	private static final String TAG_ACTION_COUNT = "action_count";
-	/** KEY 保存最大TAG数*/
-	private static final String TAG_TAG_COUNT = "tag_count";
+	/** KEY 保存是否初始化*/
+	private static final String FIRST_ENTER = "first_enter";
        
        /**
    	 * 构造方法
@@ -59,21 +57,21 @@ public class VMapSharedPreference {
 		return pref.edit();
 	}
    	/**
-	 * 取得最大执行任务数量
+	 * 是否未初始化数据
 	 * @return
 	 */
-	public int getActionCount() {
+	public boolean isFirstEnter() {
 		SharedPreferences pref = getSharedPreferences();
-		return pref.getInt(TAG_ACTION_COUNT, 1);
+		return pref.getBoolean(FIRST_ENTER, true);
 
 	}
 	/**
-	 * 设置最大执行任务数量
+	 * 设置是否未初始化数据
 	 * @return
 	 */
-	public boolean setActionCount(int count) {
+	public boolean setFirstEnter(boolean b) {
 		Editor editor = getEditor();
-		editor.putInt(TAG_ACTION_COUNT, count);
+		editor.putBoolean(FIRST_ENTER, b);
 		return editor.commit();
 	}
 }

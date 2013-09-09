@@ -85,10 +85,6 @@
         </activity>
 
         <provider
-            android:name="com.victor.vmap.provider.SearchProvider"
-            android:authorities="search"
-            android:syncable="false" />
-        <provider
             android:name="com.victor.vmap.provider.BranchDataProvider"
             android:authorities="com.victor.vmap.provider.BranchDataProvider"
             android:syncable="false" />

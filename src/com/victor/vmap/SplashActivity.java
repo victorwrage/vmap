@@ -6,6 +6,7 @@ import java.util.List;
 import com.victor.vmap.control.BranchModel;
 import com.victor.vmap.control.BranchRequestModel;
 import com.victor.vmap.control.FetchManager;
+import com.victor.vmap.control.VMapSharedPreference;
 import com.victor.vmap.provider.BranchDbHelper;
 import com.victor.vmap.utils.MapConstant;
 import com.yachi.library_yachi.VLog;
@@ -21,19 +22,20 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 
-public class SplashActivity extends Activity {
+public class SplashActivity extends BaseActivity {
 	private VMapApplication app;
 	private Context context;
 	private BranchDbHelper db_helper;
+	private VMapSharedPreference pref;
 	/** 设置超时 */
 	public static final int MSG_NET_TIMEOUT = 100;
 	public static final int MSG_NET_STATUS_ERROR = 200;
 	public static final int MSG_NET_SUCC = 1;
+	/**联网失败，直接进入地图*/
+	public static final int MSG_NET_FAILED = 400;
 	/** 记录为空 */
 	public static final int MSG_EMPTY = 300;
-	private int count = 0;
-	/** Geotable_id 的数组 */
-	private String[] geotable_id_pool;
+
 	/*
 	 * 处理网络请求
 	 */
@@ -41,7 +43,7 @@ public class SplashActivity extends Activity {
 
 		@Override
 		public void handleMessage(Message msg) {
-			count++;
+
 			switch (msg.what) {
 				case MSG_NET_TIMEOUT :
 					// VToast.toast(context, "网络超时，网点更新失败！");
@@ -60,30 +62,17 @@ public class SplashActivity extends Activity {
 				case MSG_NET_SUCC :
 					VLog.v("fetch  geotable  data  sucess-"
 							+ MapConstant.UPDATING_GEOTABLE_SEQ);
-					for (BranchModel item : MapConstant.getList()) {
-						if (db_helper.existCardId(item.getUid())) {
-							db_helper.updateBranchItem(item);
-						} else {
-							db_helper.insertBranchItem(item);
-						}
-					}
-
-					List<BranchModel> db_items = db_helper.getBranchs();
-					if (db_items.size() > MapConstant.getList().size()) {
-						for (BranchModel item : db_items) {
-							if (db_helper.existCardId(item.getUid())) {
-								db_helper.deleteTagItem(item);
-							}
-						}
-					}
-					if (count > geotable_id_pool.length) {
-						new initBranchs().execute("");
-					}
+				
+					enterMapActivity();
+					
+					break;
+				case MSG_NET_FAILED :
+					VLog.v("fetch  geotable  data  sucess-"
+							+ MapConstant.UPDATING_GEOTABLE_SEQ);
+					//enterMapActivity();
 					break;
 			}
-
 		}
-
 	};
 
 	@Override
@@ -96,24 +85,34 @@ public class SplashActivity extends Activity {
 		app.setHandler(mHandler);
 		setContentView(R.layout.activity_splash);
 		db_helper = BranchDbHelper.getInstance(context);
-		geotable_id_pool = getResources().getStringArray(R.array.geotable_ids);
+		pref = VMapSharedPreference.getInstance(context);
+		fetchBranchs();
+		/*if (pref.isFirstEnter()) {//第一次初始化等待
+			VToast.toast(context, R.string.tip_update_date_first);
+		} else {
+			pref.setFirstEnter(false);
+			new initBranchs().execute("");
+		}*/
+		enterMapActivity();
+	}
+
+	/**
+	 * 联网获取网点 
+	 */
+	private void fetchBranchs() {
+		MapConstant.geotable_id_pool = getResources().getStringArray(R.array.geotable_ids);
 		List<BranchRequestModel> request_pool = new ArrayList<BranchRequestModel>();
 
-		request_pool.add(new BranchRequestModel(geotable_id_pool[0]));
-		request_pool.add(new BranchRequestModel(geotable_id_pool[1]));
-		request_pool.add(new BranchRequestModel(geotable_id_pool[2]));
-		request_pool.add(new BranchRequestModel(geotable_id_pool[3]));
+		request_pool.add(new BranchRequestModel(MapConstant.geotable_id_pool[0]));
+		request_pool.add(new BranchRequestModel(MapConstant.geotable_id_pool[1]));
+		request_pool.add(new BranchRequestModel(MapConstant.geotable_id_pool[2]));
+		request_pool.add(new BranchRequestModel(MapConstant.geotable_id_pool[3]));
 
 		MapConstant.setRequest_list(request_pool);
 
 		FetchManager manager = FetchManager.getInstance(context);
 		manager.startFetchData();
-
-		if (db_helper.getBranchs().size() != 0) {
-			new initBranchs().execute("");
-		} else {
-			VToast.toast(context, R.string.tip_update_date_first);
-		}
+		
 	}
 
 	/**
@@ -131,22 +130,21 @@ public class SplashActivity extends Activity {
 	}
 
 	/**
-	 * 进入地图
+	 * 进入地图页面
 	 * 
 	 * @Name enterMapActivity
 	 * @Description TODO
 	 * 
 	 */
 	private void enterMapActivity() {
-		finish();
 		startActivity(new Intent(context, MainActivity.class));
-
+		finish();
 	}
 
 	/**
 	 * 
 	 * @ClassName initBranchs 
-	 * @Description TODO 初始化数据库
+	 * @Description TODO 非首次进入初始化数据库
 	 * @Version 1.0
 	 * @Creation 2013-9-7 下午5:52:01 
 	 * @Mender xiaoyl
@@ -165,15 +163,16 @@ public class SplashActivity extends Activity {
 		**/
 		@Override
 		protected String doInBackground(String... params) {
+			
 			MapConstant.cate_branchs = new ArrayList<ArrayList<BranchModel>>();
 			ArrayList<BranchModel> listA = db_helper
-					.getBranchsByGeotableId(geotable_id_pool[0]);
+					.getBranchsByGeotableId(MapConstant.geotable_id_pool[0]);
 			ArrayList<BranchModel> listB = db_helper
-					.getBranchsByGeotableId(geotable_id_pool[1]);
+					.getBranchsByGeotableId(MapConstant.geotable_id_pool[1]);
 			ArrayList<BranchModel> listC = db_helper
-					.getBranchsByGeotableId(geotable_id_pool[2]);
+					.getBranchsByGeotableId(MapConstant.geotable_id_pool[2]);
 			ArrayList<BranchModel> listD = db_helper
-					.getBranchsByGeotableId(geotable_id_pool[3]);
+					.getBranchsByGeotableId(MapConstant.geotable_id_pool[3]);
 			if (listA == null) {
 				listA = new ArrayList<BranchModel>();
 			}
@@ -190,12 +189,10 @@ public class SplashActivity extends Activity {
 			MapConstant.cate_branchs.add(listB);
 			MapConstant.cate_branchs.add(listC);
 			MapConstant.cate_branchs.add(listD);
-			if (!SplashActivity.this.isFinishing()) {
-				enterMapActivity();
-			}
+
+			enterMapActivity();
+			
 			return null;
 		}
-		
 	}
-	
 }
